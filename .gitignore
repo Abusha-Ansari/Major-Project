@@ -1,1 +1,6 @@
-data
+data/
+models/
+.venv/
+__pycache__/
+*.pyc
+*.log

@@ -4,3 +4,6 @@ Pillow
 tqdm
 scikit-learn
 matplotlib
+fastapi
+uvicorn
+python-multipart

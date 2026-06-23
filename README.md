@@ -94,6 +94,32 @@ models/xray_global.pt
 python src/predict.py --model-path models\xray_global.pt --image-path "path\to\image.jpeg"
 ```
 
+## Run Web Prediction Interface
+
+After `models/xray_global.pt` exists, install the updated dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Start the FastAPI server:
+
+```bash
+uvicorn src.api:app --reload
+```
+
+Open this URL in your browser:
+
+```text
+http://127.0.0.1:8000
+```
+
+The web page lets you upload one chest X-ray and returns:
+
+- prediction: `NORMAL` or `PNEUMONIA`
+- confidence
+- class probabilities
+
 ## Suggested Project Phases
 
 1. X-ray model with local folder hospitals.
