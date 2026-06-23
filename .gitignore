@@ -4,3 +4,5 @@ models/
 __pycache__/
 *.pyc
 *.log
+client_work/
+server_storage/

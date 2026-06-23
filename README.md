@@ -120,6 +120,52 @@ The web page lets you upload one chest X-ray and returns:
 - confidence
 - class probabilities
 
+## Run Hospital Desktop Client
+
+Keep the FastAPI server running:
+
+```bash
+uvicorn src.api:app --host 127.0.0.1 --port 8000
+```
+
+Then open the hospital desktop app in another terminal:
+
+```bash
+python src/hospital_desktop.py
+```
+
+In the app:
+
+1. Keep server URL as `http://127.0.0.1:8000`.
+2. Enter a hospital name, for example `Hospital 1`.
+3. Select a hospital dataset folder, for example:
+
+```text
+data/hospitals_xray/hospital_1
+```
+
+4. Click `Train Locally and Submit Weights`.
+
+The hospital app downloads the global model, trains locally, and sends only the updated weights to the central server.
+
+You can do the same from the command line:
+
+```bash
+python src/hospital_client.py --hospital-name "Hospital 1" --dataset-dir data\hospitals_xray\hospital_1 --epochs 1
+```
+
+After one or more hospitals submit updates, aggregate them on the server:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/fl/aggregate?round_id=current"
+```
+
+Check pending submitted updates:
+
+```bash
+curl "http://127.0.0.1:8000/fl/status?round_id=current"
+```
+
 ## Suggested Project Phases
 
 1. X-ray model with local folder hospitals.
