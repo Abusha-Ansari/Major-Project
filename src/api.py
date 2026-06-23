@@ -1,4 +1,5 @@
 import io
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -74,6 +75,11 @@ def load_model_on_startup():
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/admin")
+def admin():
+    return FileResponse(STATIC_DIR / "admin.html")
 
 
 @app.get("/health")
@@ -165,7 +171,7 @@ async def submit_update(
 
 
 @app.post("/fl/aggregate")
-def aggregate_updates(round_id: str = Query("current")):
+def aggregate_updates(round_id: str = Query("current"), clear_updates: bool = Query(True)):
     round_dir = FL_STORAGE_DIR / safe_name(round_id)
     update_files = sorted(round_dir.glob("*.pt")) if round_dir.exists() else []
     if not update_files:
@@ -203,9 +209,13 @@ def aggregate_updates(round_id: str = Query("current")):
             "hospitals": hospitals,
             "sample_counts": sample_counts,
             "model_state": averaged_state,
+            "aggregated_at": int(time.time()),
         },
         archive_path,
     )
+
+    if clear_updates:
+        shutil.rmtree(round_dir)
 
     return {
         "status": "aggregated",
@@ -215,6 +225,7 @@ def aggregate_updates(round_id: str = Query("current")):
         "hospitals": hospitals,
         "global_model": str(MODEL_PATH),
         "archive": str(archive_path),
+        "cleared_updates": clear_updates,
     }
 
 

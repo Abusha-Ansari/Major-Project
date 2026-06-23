@@ -50,6 +50,20 @@
       letter-spacing: 0;
     }
 
+    a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .status {
       border: 1px solid var(--line);
       background: var(--panel);
@@ -233,7 +247,10 @@
   <div class="shell">
     <header>
       <h1>X-ray Pneumonia Detection</h1>
-      <div class="status" id="status">Checking model...</div>
+      <div class="header-actions">
+        <a href="/admin">Admin Dashboard</a>
+        <div class="status" id="status">Checking model...</div>
+      </div>
     </header>
 
     <main>

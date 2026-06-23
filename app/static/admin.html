@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Federated Admin Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d8dee9;
+      --accent: #0f766e;
+      --accent-dark: #0a5d58;
+      --warn: #b54708;
+      --ok: #067647;
+      --danger: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .metric-value.ok {
+      color: var(--ok);
+    }
+
+    .metric-value.warn {
+      color: var(--warn);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    label {
+      color: var(--muted);
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 12px;
+      min-width: 180px;
+      font-size: 15px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button.secondary {
+      background: #e7edf5;
+      color: var(--ink);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 13px 10px;
+      text-align: left;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 22px 0;
+    }
+
+    .message {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    .message.success {
+      color: var(--ok);
+    }
+
+    @media (max-width: 820px) {
+      header,
+      .grid {
+        display: block;
+      }
+
+      .panel {
+        margin-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>Federated Admin Dashboard</h1>
+      <a href="/">Prediction Website</a>
+    </header>
+
+    <section class="grid">
+      <div class="panel">
+        <div class="metric-label">Global Model</div>
+        <div class="metric-value" id="modelStatus">...</div>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Pending Updates</div>
+        <div class="metric-value warn" id="pendingUpdates">0</div>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Device</div>
+        <div class="metric-value" id="device">...</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div>
+          <label for="roundId">Round ID</label>
+          <input id="roundId" value="current">
+        </div>
+        <button id="refreshButton" class="secondary">Refresh</button>
+        <button id="aggregateButton">Aggregate Updates</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Hospital</th>
+            <th>Samples</th>
+            <th>Update File</th>
+          </tr>
+        </thead>
+        <tbody id="updatesBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty">No hospital updates submitted yet.</div>
+      <div id="message" class="message"></div>
+    </section>
+  </div>
+
+  <script>
+    const modelStatus = document.getElementById("modelStatus");
+    const pendingUpdates = document.getElementById("pendingUpdates");
+    const device = document.getElementById("device");
+    const roundId = document.getElementById("roundId");
+    const refreshButton = document.getElementById("refreshButton");
+    const aggregateButton = document.getElementById("aggregateButton");
+    const updatesBody = document.getElementById("updatesBody");
+    const emptyState = document.getElementById("emptyState");
+    const message = document.getElementById("message");
+
+    function setMessage(text, type = "") {
+      message.textContent = text;
+      message.className = `message ${type}`;
+    }
+
+    async function loadHealth() {
+      const response = await fetch("/health");
+      const data = await response.json();
+      modelStatus.textContent = data.model_loaded ? "Ready" : "Missing";
+      modelStatus.className = data.model_loaded ? "metric-value ok" : "metric-value";
+      device.textContent = data.device.toUpperCase();
+    }
+
+    async function loadStatus() {
+      const selectedRound = encodeURIComponent(roundId.value || "current");
+      const response = await fetch(`/fl/status?round_id=${selectedRound}`);
+      const data = await response.json();
+      pendingUpdates.textContent = data.pending_updates;
+
+      updatesBody.innerHTML = "";
+      emptyState.style.display = data.updates.length ? "none" : "block";
+
+      for (const update of data.updates) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${update.hospital_name || "Unknown"}</td>
+          <td>${update.sample_count || "-"}</td>
+          <td>${update.file || update.error || "-"}</td>
+        `;
+        updatesBody.appendChild(row);
+      }
+
+      aggregateButton.disabled = data.pending_updates === 0;
+    }
+
+    async function refresh() {
+      try {
+        setMessage("Refreshing...");
+        await loadHealth();
+        await loadStatus();
+        setMessage("Dashboard updated.", "success");
+      } catch (err) {
+        setMessage(`Refresh failed: ${err.message}`, "error");
+      }
+    }
+
+    async function aggregate() {
+      const selectedRound = encodeURIComponent(roundId.value || "current");
+      aggregateButton.disabled = true;
+      setMessage("Aggregating hospital weights...");
+
+      try {
+        const response = await fetch(`/fl/aggregate?round_id=${selectedRound}&clear_updates=true`, {
+          method: "POST"
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Aggregation failed.");
+        }
+
+        setMessage(`Aggregated ${data.num_updates} updates from ${data.total_samples} samples.`, "success");
+        await loadHealth();
+        await loadStatus();
+      } catch (err) {
+        setMessage(`Aggregation failed: ${err.message}`, "error");
+      } finally {
+        aggregateButton.disabled = false;
+      }
+    }
+
+    refreshButton.addEventListener("click", refresh);
+    aggregateButton.addEventListener("click", aggregate);
+    roundId.addEventListener("change", refresh);
+    refresh();
+  </script>
+</body>
+</html>

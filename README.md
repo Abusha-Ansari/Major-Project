@@ -120,6 +120,14 @@ The web page lets you upload one chest X-ray and returns:
 - confidence
 - class probabilities
 
+Open the central admin dashboard here:
+
+```text
+http://127.0.0.1:8000/admin
+```
+
+The admin dashboard shows pending hospital updates and can aggregate submitted weights into the global model.
+
 ## Run Hospital Desktop Client
 
 Keep the FastAPI server running:
@@ -154,7 +162,13 @@ You can do the same from the command line:
 python src/hospital_client.py --hospital-name "Hospital 1" --dataset-dir data\hospitals_xray\hospital_1 --epochs 1
 ```
 
-After one or more hospitals submit updates, aggregate them on the server:
+After one or more hospitals submit updates, aggregate them from the admin dashboard:
+
+```text
+http://127.0.0.1:8000/admin
+```
+
+Or aggregate from the command line:
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/fl/aggregate?round_id=current"
