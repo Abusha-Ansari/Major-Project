@@ -1,0 +1,44 @@
+# Project Overview
+
+Federated Learning for Pneumonia Detection
+
+This project implements a federated learning system for detecting pneumonia from chest X-ray images. The core concept is privacy-preserving distributed training where hospitals train locally on their private data and only share model weights with a central server.
+
+## Architecture
+
+- Central Server: Aggregates model weights from multiple hospitals without accessing their private data
+- Hospital Clients: Train local models on their own X-ray datasets and submit only weight updates
+- Initial Model: ResNet18 with ImageNet-pretrained features, fine-tuned for binary classification (NORMAL vs PNEUMONIA)
+
+## Key Components
+
+- src/api.py: FastAPI server providing web interface, prediction API, and federated learning coordination
+- src/federated_train.py: Orchestrates federated training rounds across hospitals
+- src/hospital_client.py: Command-line client for hospitals to train and submit weights
+- src/hospital_desktop.py: Desktop GUI application for hospital participation
+- src/train_initial.py: Optional central training on seed dataset
+- scripts/prepare_xray_dataset.py: Prepares X-ray data from ZIP files
+- scripts/split_hospitals.py: Splits data into simulated hospital folders
+
+## Tech Stack
+
+- PyTorch/TorchVision: Deep learning framework and model architecture
+- FastAPI/Uvicorn: Web server and API framework
+- Python: Core language with standard ML libraries (scikit-learn, matplotlib, Pillow)
+
+## Workflow
+
+1. Prepare X-ray dataset from ZIP file
+2. Split data into simulated hospital folders
+3. Optionally train initial global model on seed data
+4. Hospitals train locally and submit weight updates
+5. Central server aggregates weights into global model
+6. Web interface allows predictions and admin dashboard for monitoring
+
+## Project Phases (Planned)
+
+1. X-ray model with local folder hospitals
+2. FastAPI central server
+3. Hospital desktop app
+4. End-user web interface for prediction
+5. CT scan model as separate pipeline (planned)
