@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import torch
+from torch import nn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,10 +15,11 @@ SRC_DIR = Path(__file__).resolve().parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import CLASS_NAMES, MODELS_DIR, PROJECT_ROOT
-from data_utils import eval_transforms
+from config import CLASS_NAMES, DEFAULT_BATCH_SIZE, MODELS_DIR, PROJECT_ROOT, TEST_DIR
+from data_utils import eval_transforms, make_loader
+from metrics_store import get_all_metrics, save_baseline_metrics, save_round_metrics
 from model import build_model, load_checkpoint, save_checkpoint
-from train_utils import fedavg
+from train_utils import evaluate, fedavg
 
 
 MODEL_PATH = MODELS_DIR / "xray_global.pt"
@@ -200,6 +202,39 @@ def aggregate_updates(round_id: str = Query("current"), clear_updates: bool = Qu
     reset_model_cache()
     get_model()
 
+    # ── post-aggregation evaluation ────────────────────────────────────────
+    eval_info: dict = {}
+    if TEST_DIR and TEST_DIR.exists():
+        try:
+            active_model = get_model()
+            test_loader, _ = make_loader(
+                str(TEST_DIR), batch_size=DEFAULT_BATCH_SIZE, train=False
+            )
+            eval_metrics = evaluate(
+                active_model, test_loader, nn.CrossEntropyLoss(), device
+            )
+            saved = save_round_metrics(
+                round_id=round_id,
+                accuracy=eval_metrics["accuracy"],
+                loss=eval_metrics["loss"],
+                num_hospitals=len(hospitals),
+                total_samples=sum(sample_counts),
+            )
+            eval_info = {
+                "metrics_saved": True,
+                "accuracy": eval_metrics["accuracy"],
+                "loss": eval_metrics["loss"],
+                "round_num": saved["round_num"],
+            }
+        except Exception as exc:
+            print(f"[metrics] Post-aggregation evaluation failed: {exc}")
+            eval_info = {"metrics_saved": False, "error": str(exc)}
+    else:
+        eval_info = {
+            "metrics_saved": False,
+            "reason": "TEST_DIR not configured or does not exist",
+        }
+
     aggregated_dir = FL_STORAGE_DIR / "aggregated"
     aggregated_dir.mkdir(parents=True, exist_ok=True)
     archive_path = aggregated_dir / f"{safe_name(round_id)}_{int(time.time())}.pt"
@@ -226,7 +261,58 @@ def aggregate_updates(round_id: str = Query("current"), clear_updates: bool = Qu
         "global_model": str(MODEL_PATH),
         "archive": str(archive_path),
         "cleared_updates": clear_updates,
+        "evaluation": eval_info,
     }
+
+
+@app.get("/fl/metrics")
+def get_metrics():
+    """Return all persisted training metrics (baseline + per-round history)."""
+    return get_all_metrics()
+
+
+@app.post("/fl/evaluate")
+def trigger_evaluation(set_as_baseline: bool = Query(False)):
+    """
+    Evaluate the current global model on the configured TEST_DIR.
+
+    - ``set_as_baseline=false`` (default) — returns metrics only, no write.
+    - ``set_as_baseline=true``            — persists result as the baseline entry.
+    """
+    if not TEST_DIR or not TEST_DIR.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Test directory not found: '{TEST_DIR}'. "
+                "Set TEST_DIR in src/config.py to your test split folder."
+            ),
+        )
+
+    try:
+        active_model = get_model()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    test_loader, _ = make_loader(
+        str(TEST_DIR), batch_size=DEFAULT_BATCH_SIZE, train=False
+    )
+    result = evaluate(active_model, test_loader, nn.CrossEntropyLoss(), device)
+
+    response: dict = {
+        "accuracy": result["accuracy"],
+        "loss": result["loss"],
+        "samples": result["samples"],
+    }
+
+    if set_as_baseline:
+        save_baseline_metrics(
+            accuracy=result["accuracy"],
+            loss=result["loss"],
+            samples=result["samples"],
+        )
+        response["saved_as"] = "baseline"
+
+    return response
 
 
 @app.post("/predict")
