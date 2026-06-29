@@ -448,6 +448,80 @@
       animation: spin 0.55s linear infinite;
     }
 
+    /* ── Evaluation Report ─────────────────────────────────────────────────── */
+    .eval-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .cm-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cm-canvas-container {
+      position: relative;
+    }
+
+    .cm-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      color: var(--dim); text-align: center;
+    }
+
+    .eval-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .eval-metric-card {
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .eval-metric-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 5px;
+    }
+
+    .eval-metric-value {
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -.03em; line-height: 1;
+    }
+
+    .eval-metric-value.ok     { color: var(--success); }
+    .eval-metric-value.accent { color: var(--accent); }
+    .eval-metric-value.warn   { color: var(--warning); }
+    .eval-metric-value.dim    { color: var(--muted); }
+
+    .per-class-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 2px; }
+    .per-class-table th {
+      text-align: left; padding: 7px 10px;
+      color: var(--dim); font-size: 10px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .per-class-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.03); }
+    .per-class-table tr:last-child td { border-bottom: none; }
+
+    .eval-empty {
+      text-align: center; padding: 32px;
+      color: var(--dim); font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .eval-grid { grid-template-columns: 1fr; }
+    }
+
     /* ── Responsive ────────────────────────────────────────────────────── */
     @media (max-width: 1000px) {
       .stats-grid  { grid-template-columns: repeat(2,1fr); }
@@ -476,6 +550,7 @@
     </div>
     <nav class="nav-links">
       <a href="/" class="nav-link">← Prediction Page</a>
+      <a href="/hospital" class="nav-link">Hospital Portal</a>
     </nav>
   </header>
 
@@ -583,6 +658,77 @@
     </table>
     <div class="empty-state" id="roundsEmpty">No federated rounds completed yet.</div>
   </div><!-- /metrics panel -->
+
+  <!-- ── Evaluation Report Panel ────────────────────────────────────────── -->
+  <div class="panel" id="evalPanel">
+    <div class="section-header">
+      <h2 class="section-title">🔬 Evaluation Report</h2>
+      <div class="section-actions">
+        <button class="btn btn-secondary" onclick="loadEvalReport()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Empty state (before first evaluation) -->
+    <div class="eval-empty" id="evalEmpty">
+      No evaluation report yet.
+      Click <strong>“Evaluate &amp; Set Baseline”</strong> in the Training Metrics panel above to generate one.
+    </div>
+
+    <!-- Report body (shown once data exists) -->
+    <div id="evalContent" style="display:none">
+
+      <!-- Row: confusion matrix + summary metrics -->
+      <div class="eval-grid">
+
+        <!-- Confusion matrix -->
+        <div class="cm-wrap">
+          <div class="cm-title">Confusion Matrix</div>
+          <div class="cm-canvas-container">
+            <canvas id="cmCanvas" width="220" height="220"></canvas>
+          </div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px" id="cmSubtitle"></div>
+        </div>
+
+        <!-- Summary + per-class -->
+        <div>
+          <div class="eval-metrics-grid" id="evalMetricsGrid"></div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">
+            Per-Class Breakdown
+          </div>
+          <table class="per-class-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1</th>
+              </tr>
+            </thead>
+            <tbody id="perClassBody"></tbody>
+          </table>
+
+          <!-- vs Baseline comparison -->
+          <div id="baselineCompare" style="display:none;margin-top:14px;padding:12px 14px;
+               background:var(--surface-3);border:1px solid var(--border);border-radius:10px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+                        color:var(--dim);margin-bottom:8px">vs Baseline Comparison</div>
+            <div id="compareRows" style="display:flex;gap:16px;flex-wrap:wrap"></div>
+          </div>
+        </div>
+      </div><!-- /eval-grid -->
+
+      <div style="margin-top:16px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+                    color:var(--dim);margin-bottom:6px">sklearn Classification Report</div>
+        <pre id="reportText" style="margin:0;padding:12px;background:var(--surface);
+             border:1px solid var(--border);border-radius:10px;font-size:11px;
+             color:var(--muted);font-family:Consolas,monospace;overflow-x:auto;white-space:pre"></pre>
+      </div>
+    </div><!-- /evalContent -->
+
+    <div class="status-msg" id="evalMsg"></div>
+  </div><!-- /eval panel -->
 
   <!-- ── FL Control Panel ────────────────────────────────────────────────── -->
   <div class="panel">
@@ -841,6 +987,180 @@
     }
   }
 
+  // ── Evaluation Report ─────────────────────────────────────────────────────────────────
+
+  function drawConfusionMatrix(cm, classNames) {
+    const canvas = document.getElementById('cmCanvas');
+    const ctx    = canvas.getContext('2d');
+    const n      = cm.length;
+    const W = canvas.width, H = canvas.height;
+    const pad = 36;
+    const cellW = (W - pad * 2) / n;
+    const cellH = (H - pad * 2) / n;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const maxVal = Math.max(...cm.flat(), 1);
+
+    // Draw cells
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const val    = cm[r][c];
+        const alpha  = 0.15 + 0.75 * (val / maxVal);
+        const isDiag = r === c;
+
+        ctx.fillStyle = isDiag
+          ? `rgba(34,197,94,${alpha})`
+          : `rgba(239,68,68,${alpha})`;
+
+        const x = pad + c * cellW;
+        const y = pad + r * cellH;
+        ctx.fillRect(x, y, cellW - 2, cellH - 2);
+
+        // Count label
+        ctx.fillStyle  = '#f4f4f5';
+        ctx.font       = `bold ${Math.min(16, cellW / 3)}px Inter, sans-serif`;
+        ctx.textAlign  = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(val.toLocaleString(), x + cellW / 2, y + cellH / 2);
+      }
+    }
+
+    // Axis labels
+    ctx.fillStyle    = '#a1a1aa';
+    ctx.font         = `11px Inter, sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let i = 0; i < n; i++) {
+      const name = (classNames[i] || String(i)).slice(0, 8);
+      // Column labels (top)
+      ctx.fillText(name, pad + i * cellW + cellW / 2, pad / 2);
+      // Row labels (left)
+      ctx.save();
+      ctx.translate(pad / 2, pad + i * cellH + cellH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(name, 0, 0);
+      ctx.restore();
+    }
+
+    // Axis titles
+    ctx.fillStyle  = '#71717a';
+    ctx.font       = '10px Inter, sans-serif';
+    ctx.textAlign  = 'center';
+    ctx.fillText('Predicted', W / 2, H - 4);
+    ctx.save();
+    ctx.translate(8, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Actual', 0, 0);
+    ctx.restore();
+  }
+
+  function renderEvalReport(data, metricsData) {
+    if (!data) {
+      document.getElementById('evalEmpty').style.display   = 'block';
+      document.getElementById('evalContent').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('evalEmpty').style.display   = 'none';
+    document.getElementById('evalContent').style.display = 'block';
+
+    // Confusion matrix
+    const cm         = data.confusion_matrix || [[0,0],[0,0]];
+    const classNames = data.class_names      || ['NORMAL','PNEUMONIA'];
+    drawConfusionMatrix(cm, classNames);
+    document.getElementById('cmSubtitle').textContent =
+      `${data.samples} test samples · ${data.label || 'current'}`;
+
+    // Summary metrics cards
+    const grid = document.getElementById('evalMetricsGrid');
+    grid.innerHTML = '';
+    const metricCards = [
+      { label: 'Accuracy',  value: (data.accuracy  * 100).toFixed(2) + '%', cls: 'ok'     },
+      { label: 'F1 Score',  value: (data.f1        * 100).toFixed(2) + '%', cls: 'accent' },
+      { label: 'Precision', value: (data.precision * 100).toFixed(2) + '%', cls: 'warn'   },
+      { label: 'Recall',    value: (data.recall    * 100).toFixed(2) + '%', cls: 'dim'    },
+    ];
+    for (const m of metricCards) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="eval-metric-card">
+          <div class="eval-metric-label">${m.label}</div>
+          <div class="eval-metric-value ${m.cls}">${m.value}</div>
+        </div>
+      `);
+    }
+
+    // Per-class table
+    const tbody = document.getElementById('perClassBody');
+    tbody.innerHTML = '';
+    for (const pc of (data.per_class || [])) {
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td><strong>${pc.class}</strong></td>
+          <td>${(pc.precision * 100).toFixed(2)}%</td>
+          <td>${(pc.recall    * 100).toFixed(2)}%</td>
+          <td>${(pc.f1        * 100).toFixed(2)}%</td>
+        </tr>
+      `);
+    }
+
+    // vs Baseline comparison
+    const compareEl = document.getElementById('baselineCompare');
+    const baseline  = metricsData && metricsData.baseline;
+    if (baseline) {
+      compareEl.style.display = 'block';
+      const rows = document.getElementById('compareRows');
+      rows.innerHTML = '';
+
+      const comparisons = [
+        { label: 'Accuracy',  curr: data.accuracy,  base: baseline.accuracy  },
+        { label: 'Loss',      curr: data.loss,       base: baseline.loss, invert: true },
+      ];
+
+      for (const comp of comparisons) {
+        const diff = comp.invert
+          ? ((comp.base - comp.curr) * 100).toFixed(2)   // lower loss = improvement
+          : ((comp.curr - comp.base) * 100).toFixed(2);
+        const sign  = parseFloat(diff) >= 0 ? '+' : '';
+        const color = parseFloat(diff) >= 0 ? 'var(--success)' : 'var(--danger)';
+        rows.insertAdjacentHTML('beforeend', `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;
+                      padding:10px 16px;min-width:110px;text-align:center">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+                        color:var(--dim);margin-bottom:5px">${comp.label}</div>
+            <div style="font-size:18px;font-weight:800;color:${color}">${sign}${diff}%</div>
+            <div style="font-size:11px;color:var(--dim)">vs baseline</div>
+          </div>
+        `);
+      }
+    } else {
+      compareEl.style.display = 'none';
+    }
+
+    // Raw sklearn report
+    document.getElementById('reportText').textContent = data.report_text || '';
+  }
+
+  async function loadEvalReport() {
+    try {
+      const [evalRes, metricsRes] = await Promise.all([
+        fetch('/fl/evaluation-report'),
+        fetch('/fl/metrics'),
+      ]);
+      const metricsData = metricsRes.ok ? await metricsRes.json() : null;
+
+      if (!evalRes.ok) {
+        renderEvalReport(null, metricsData);
+        return;
+      }
+      const data = await evalRes.json();
+      renderEvalReport(data, metricsData);
+    } catch (e) {
+      console.warn('[eval]', e.message);
+    }
+  }
+
   // ── API helpers ────────────────────────────────────────────────────────────
   async function loadHealth() {
     const res  = await fetch('/health');
@@ -900,12 +1220,13 @@
       if (!res.ok) throw new Error(data.detail || 'Evaluation failed.');
 
       const acc = (data.accuracy * 100).toFixed(2);
+      const f1  = (data.f1 * 100).toFixed(2);
       const txt = setAsBaseline
-        ? `✅ Baseline set — Accuracy: ${acc}%  Loss: ${data.loss.toFixed(4)}`
-        : `✅ Evaluation done — Accuracy: ${acc}%  Loss: ${data.loss.toFixed(4)}`;
+        ? `✅ Baseline set — Accuracy: ${acc}%  F1: ${f1}%  Loss: ${data.loss.toFixed(4)}`
+        : `✅ Evaluation done — Accuracy: ${acc}%  F1: ${f1}%  Loss: ${data.loss.toFixed(4)}`;
 
       showMsg(msgEl, txt, 'success');
-      await loadMetrics();
+      await Promise.all([loadMetrics(), loadEvalReport()]);
     } catch (err) {
       showMsg(msgEl, `❌ ${err.message}`, 'error');
     } finally {
@@ -959,7 +1280,7 @@
   initCharts();
   updateCharts({ baseline: null, rounds: [] });   // start with empty states
 
-  Promise.all([loadHealth(), loadStatus(), loadMetrics()]);
+  Promise.all([loadHealth(), loadStatus(), loadMetrics(), loadEvalReport()]);
 </script>
 </body>
 </html>

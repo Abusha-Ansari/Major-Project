@@ -21,6 +21,8 @@ from metrics_store import get_all_metrics, save_baseline_metrics, save_round_met
 from model import build_model, load_checkpoint, save_checkpoint
 from train_utils import evaluate, fedavg
 
+from evaluate import run_evaluation, load_report
+
 from pydantic import BaseModel
 
 from auth_store import (
@@ -321,12 +323,18 @@ def get_metrics():
 
 
 @app.post("/fl/evaluate")
-def trigger_evaluation(set_as_baseline: bool = Query(False)):
+def trigger_evaluation(
+    set_as_baseline: bool = Query(False),
+    label: str = Query("current"),
+):
     """
     Evaluate the current global model on the configured TEST_DIR.
 
-    - ``set_as_baseline=false`` (default) — returns metrics only, no write.
-    - ``set_as_baseline=true``            — persists result as the baseline entry.
+    Returns a full report: accuracy, loss, precision, recall, F1,
+    confusion matrix, and per-class breakdown.
+
+    - ``set_as_baseline=true``  — also saves the result as the metrics baseline.
+    - ``label``                 — human label stored in the report (e.g. "baseline").
     """
     if not TEST_DIR or not TEST_DIR.exists():
         raise HTTPException(
@@ -345,23 +353,38 @@ def trigger_evaluation(set_as_baseline: bool = Query(False)):
     test_loader, _ = make_loader(
         str(TEST_DIR), batch_size=DEFAULT_BATCH_SIZE, train=False
     )
-    result = evaluate(active_model, test_loader, nn.CrossEntropyLoss(), device)
 
-    response: dict = {
-        "accuracy": result["accuracy"],
-        "loss": result["loss"],
-        "samples": result["samples"],
-    }
+    report = run_evaluation(
+        model=active_model,
+        loader=test_loader,
+        criterion=nn.CrossEntropyLoss(),
+        device=device,
+        class_names=CLASS_NAMES,
+        label="baseline" if set_as_baseline else label,
+        save=True,
+    )
 
     if set_as_baseline:
         save_baseline_metrics(
-            accuracy=result["accuracy"],
-            loss=result["loss"],
-            samples=result["samples"],
+            accuracy=report["accuracy"],
+            loss=report["loss"],
+            samples=report["samples"],
         )
-        response["saved_as"] = "baseline"
+        report["saved_as"] = "baseline"
 
-    return response
+    return report
+
+
+@app.get("/fl/evaluation-report")
+def get_evaluation_report():
+    """Return the last saved evaluation report, or 404 if none exists."""
+    report = load_report()
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No evaluation report found. Run POST /fl/evaluate first.",
+        )
+    return report
 
 
 @app.post("/predict")
