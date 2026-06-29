@@ -106,6 +106,11 @@ def admin():
     return FileResponse(STATIC_DIR / "admin.html")
 
 
+@app.get("/privacy")
+def privacy():
+    return FileResponse(STATIC_DIR / "privacy.html")
+
+
 @app.get("/health")
 def health():
     return {

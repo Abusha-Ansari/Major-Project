@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy &amp; Security — Federated Learning</title>
+  <meta name="description" content="How the federated learning system protects patient privacy: no raw data ever leaves the hospital, only model weights are shared.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #09090b;
+      --surface:      #111115;
+      --surface-2:    #18181b;
+      --surface-3:    #27272a;
+      --border:       rgba(255,255,255,0.07);
+      --text:         #f4f4f5;
+      --muted:        #a1a1aa;
+      --dim:          #71717a;
+      --accent:       #6366f1;
+      --accent-light: rgba(99,102,241,0.15);
+      --success:      #22c55e;
+      --success-bg:   rgba(34,197,94,0.10);
+      --warning:      #f59e0b;
+      --warning-bg:   rgba(245,158,11,0.10);
+      --danger:       #ef4444;
+      --danger-bg:    rgba(239,68,68,0.10);
+      --teal:         #14b8a6;
+      --teal-bg:      rgba(20,184,166,0.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+    .shell {
+      width: min(960px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 32px 0 80px;
+    }
+    header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+      flex-wrap: wrap; gap: 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 22px;
+    }
+    .brand-text h1 { font-size: 18px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; }
+    .brand-text p  { font-size: 12px; color: var(--dim); margin-top: 2px; }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-link {
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--muted); text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .nav-link:hover { color: var(--text); border-color: var(--accent); background: var(--accent-light); }
+
+    /* Hero */
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 999px;
+      background: var(--accent-light); border: 1px solid rgba(99,102,241,0.25);
+      color: #818cf8; font-size: 12px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase; margin-bottom: 18px;
+    }
+    .hero h2 {
+      font-size: clamp(28px, 5vw, 44px); font-weight: 800;
+      letter-spacing: -.04em; line-height: 1.1; margin-bottom: 16px;
+    }
+    .hero h2 span {
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p { font-size: 17px; color: var(--muted); max-width: 620px; margin: 0 auto; line-height: 1.7; }
+
+    /* Section */
+    .section { margin-bottom: 48px; }
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+    .section-title { font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 14px; }
+    .section-body  { font-size: 15px; color: var(--muted); line-height: 1.75; max-width: 760px; }
+
+    /* Panel */
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px; margin-bottom: 28px;
+    }
+
+    /* Flow diagram */
+    .flow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 32px 20px; flex-wrap: wrap; row-gap: 20px;
+    }
+    .flow-node {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; min-width: 100px; animation: nodeIn 0.6s both;
+    }
+    .flow-node:nth-child(1) { animation-delay: 0.0s; }
+    .flow-node:nth-child(3) { animation-delay: 0.2s; }
+    .flow-node:nth-child(5) { animation-delay: 0.4s; }
+    .flow-node:nth-child(7) { animation-delay: 0.6s; }
+    .flow-node:nth-child(9) { animation-delay: 0.8s; }
+    @keyframes nodeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .flow-icon {
+      width: 60px; height: 60px; border-radius: 16px;
+      display: grid; place-items: center; font-size: 28px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .flow-icon:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+    .flow-icon.hospital { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3); }
+    .flow-icon.weights  { background: rgba(20,184,166,0.12);  border-color: rgba(20,184,166,0.3); }
+    .flow-icon.server   { background: rgba(245,158,11,0.12);  border-color: rgba(245,158,11,0.3); }
+    .flow-icon.global   { background: rgba(34,197,94,0.12);   border-color: rgba(34,197,94,0.3);  }
+    .flow-label { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; max-width: 90px; line-height: 1.3; }
+    .flow-arrow {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; padding: 0 6px; animation: arrowIn 0.5s both;
+    }
+    .flow-arrow:nth-child(2) { animation-delay: 0.1s; }
+    .flow-arrow:nth-child(4) { animation-delay: 0.3s; }
+    .flow-arrow:nth-child(6) { animation-delay: 0.5s; }
+    .flow-arrow:nth-child(8) { animation-delay: 0.7s; }
+    @keyframes arrowIn { from { opacity:0; transform:scaleX(0); } to { opacity:1; transform:scaleX(1); } }
+    .flow-arrow .line {
+      width: 50px; height: 2px;
+      background: linear-gradient(90deg, var(--teal), #6366f1);
+      border-radius: 2px; position: relative;
+    }
+    .flow-arrow .line::after {
+      content: '\25B6'; position: absolute;
+      right: -8px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; color: #6366f1;
+    }
+    .flow-arrow .arrow-label { font-size: 9px; color: var(--dim); text-align: center; max-width: 60px; line-height: 1.3; }
+    .no-data-callout {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 12px; padding: 14px 18px;
+      font-size: 13px; font-weight: 600; color: #fca5a5;
+      margin: 20px auto 0; max-width: 500px; justify-content: center;
+    }
+
+    /* Cards grid */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .card-icon  { font-size: 28px; margin-bottom: 12px; }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.02em; }
+    .card-body  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .card.green  { border-color: rgba(34,197,94,0.20);  background: rgba(34,197,94,0.04);  }
+    .card.red    { border-color: rgba(239,68,68,0.20);  background: rgba(239,68,68,0.04);  }
+    .card.teal   { border-color: rgba(20,184,166,0.20); background: rgba(20,184,166,0.04); }
+    .card.amber  { border-color: rgba(245,158,11,0.20); background: rgba(245,158,11,0.04); }
+    .card.indigo { border-color: rgba(99,102,241,0.20); background: rgba(99,102,241,0.04); }
+
+    /* Data boundary table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th {
+      text-align: left; padding: 10px 14px;
+      color: var(--dim); font-size: 11px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .pill.leaves { background: var(--teal-bg); color: #5eead4; }
+    .pill.never  { background: var(--danger-bg); color: #fca5a5; }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: grid; grid-template-columns: 36px 1fr; gap: 16px; padding-bottom: 28px; position: relative; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-item::before { content: ''; position: absolute; left: 17px; top: 36px; width: 2px; bottom: 0; background: var(--border); }
+    .tl-item:last-child::before { display: none; }
+    .tl-dot { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; background: var(--surface-3); border: 1px solid var(--border); position: relative; z-index: 1; }
+    .tl-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; letter-spacing: -.02em; }
+    .tl-body  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+    /* DP box */
+    .dp-box { border: 1px solid rgba(99,102,241,0.30); background: rgba(99,102,241,0.06); border-radius: 16px; padding: 28px; }
+    .dp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .dp-icon { width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 14px; display: grid; place-items: center; font-size: 24px; }
+    .dp-header-text h3 { font-size: 18px; font-weight: 800; letter-spacing: -.03em; }
+    .dp-header-text p  { font-size: 12px; color: var(--dim); margin-top: 2px; }
+    .dp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+    .dp-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .dp-step { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #818cf8; margin-bottom: 6px; display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(99,102,241,0.15); }
+    .dp-item-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .dp-item-body  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    /* Code inline */
+    code { font-family: Consolas, monospace; font-size: 12px; color: #a5b4fc; }
+
+    @media (max-width: 640px) {
+      .two-col { grid-template-columns: 1fr; }
+      .dp-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">&#x1F512;</div>
+      <div class="brand-text">
+        <h1>Privacy &amp; Security</h1>
+        <p>Federated Learning &middot; Patient Data Protection</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">&#x2190; Prediction</a>
+      <a href="/admin" class="nav-link">Admin Dashboard</a>
+      <a href="/hospital" class="nav-link">Hospital Portal</a>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">&#x1F6E1;&#xFE0F; Privacy by Design</div>
+    <h2>Patient data <span>never leaves</span><br>the hospital</h2>
+    <p>
+      Our federated learning architecture is built on a single principle:
+      raw patient X-rays stay inside the hospital network at all times.
+      Only anonymized model weights travel across the wire.
+    </p>
+  </div>
+
+  <!-- Workflow Diagram -->
+  <div class="section">
+    <div class="section-label">How it works</div>
+    <div class="section-title">The Federated Training Cycle</div>
+    <div class="panel">
+      <div class="flow-diagram">
+        <div class="flow-node">
+          <div class="flow-icon hospital">&#x1F3E5;</div>
+          <div class="flow-label">Hospital<br>Local Data</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="line"></div>
+          <div class="arrow-label">Local<br>Training</div>
+        </div>
+        <div class="flow-node">
+          <div class="flow-icon weights">&#x2696;&#xFE0F;</div>
+          <div class="flow-label">Model<br>Weights Only</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="line"></div>
+          <div class="arrow-label">Encrypted<br>Upload</div>
+        </div>
+        <div class="flow-node">
+          <div class="flow-icon server">&#x1F5A5;&#xFE0F;</div>
+          <div class="flow-label">Central<br>Server</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="line"></div>
+          <div class="arrow-label">FedAvg<br>Aggregation</div>
+        </div>
+        <div class="flow-node">
+          <div class="flow-icon global">&#x1F310;</div>
+          <div class="flow-label">New Global<br>Model</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="line"></div>
+          <div class="arrow-label">Distributed<br>Back</div>
+        </div>
+        <div class="flow-node">
+          <div class="flow-icon hospital">&#x1F3E5;</div>
+          <div class="flow-label">Better<br>Local Model</div>
+        </div>
+      </div>
+      <div class="no-data-callout">
+        <span style="font-size:20px">&#x1F6AB;</span>
+        No raw patient images ever leave the hospital network
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Data Boundaries -->
+  <div class="section">
+    <div class="section-label">Data Boundaries</div>
+    <div class="section-title">What is transmitted vs. what stays local?</div>
+    <div class="section-body" style="margin-bottom:20px">
+      A strict boundary separates patient health information (PHI) from the numerical weights shared for learning.
+    </div>
+    <div class="panel" style="padding:0;overflow:hidden">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Data Type</th>
+            <th>Location</th>
+            <th>Transmitted?</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Patient X-ray images</strong></td>
+            <td>Hospital disk</td>
+            <td><span class="pill never">Never Leaves</span></td>
+            <td style="color:var(--muted)">Remain exclusively within hospital storage</td>
+          </tr>
+          <tr>
+            <td><strong>Patient identifiers</strong></td>
+            <td>Hospital EMR</td>
+            <td><span class="pill never">Never Leaves</span></td>
+            <td style="color:var(--muted)">Not involved in model training at all</td>
+          </tr>
+          <tr>
+            <td><strong>Diagnostic labels</strong></td>
+            <td>Hospital disk</td>
+            <td><span class="pill never">Never Leaves</span></td>
+            <td style="color:var(--muted)">Used only to supervise local training</td>
+          </tr>
+          <tr>
+            <td><strong>Model weight tensors</strong></td>
+            <td>Hospital &#x2192; Server</td>
+            <td><span class="pill leaves">Shared (Weights)</span></td>
+            <td style="color:var(--muted)">Floating-point numbers, not images</td>
+          </tr>
+          <tr>
+            <td><strong>Sample count</strong></td>
+            <td>Hospital &#x2192; Server</td>
+            <td><span class="pill leaves">Shared (Count)</span></td>
+            <td style="color:var(--muted)">Integer — used for FedAvg weighting</td>
+          </tr>
+          <tr>
+            <td><strong>Aggregated global model</strong></td>
+            <td>Server &#x2192; All Hospitals</td>
+            <td><span class="pill leaves">Distributed</span></td>
+            <td style="color:var(--muted)">Averaged across all hospitals; contains no single hospital's raw data</td>
+          </tr>
+          <tr>
+            <td><strong>Hospital auth token</strong></td>
+            <td>Hospital &#x2192; Server</td>
+            <td><span class="pill leaves">Shared (Token)</span></td>
+            <td style="color:var(--muted)">UUID for identity verification, not linked to patient records</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Privacy Properties -->
+  <div class="section">
+    <div class="section-label">Privacy Properties</div>
+    <div class="section-title">Security guarantees in this system</div>
+    <div class="two-col">
+      <div class="card green">
+        <div class="card-icon">&#x1F3E0;</div>
+        <div class="card-title">Data Locality</div>
+        <div class="card-body">
+          Training data never moves. Each hospital trains exclusively on its own imaging data.
+          The server only ever receives gradient-derived weight tensors &mdash; never pixels.
+        </div>
+      </div>
+      <div class="card teal">
+        <div class="card-icon">&#x1F511;</div>
+        <div class="card-title">Token-Based Authentication</div>
+        <div class="card-body">
+          Each hospital registers with a unique UUID token. Weight submissions are rejected
+          without a valid Bearer token, preventing unauthorized model poisoning.
+        </div>
+      </div>
+      <div class="card amber">
+        <div class="card-icon">&#x1F9EE;</div>
+        <div class="card-title">Federated Averaging (FedAvg)</div>
+        <div class="card-body">
+          The aggregation algorithm computes a weighted average of all hospital weights.
+          Individual hospital contributions are mathematically blended &mdash; no single hospital's
+          training signal can be trivially isolated from the aggregate.
+        </div>
+      </div>
+      <div class="card indigo">
+        <div class="card-icon">&#x1F6E1;&#xFE0F;</div>
+        <div class="card-title">Duplicate Submission Prevention</div>
+        <div class="card-body">
+          Each hospital can submit only once per federated round. The server tracks
+          submissions in <code>round_state.json</code> and returns HTTP&nbsp;409 on duplicate attempts.
+        </div>
+      </div>
+      <div class="card green">
+        <div class="card-icon">&#x1F4CA;</div>
+        <div class="card-title">Aggregated Metrics Only</div>
+        <div class="card-body">
+          Post-round evaluation metrics (accuracy, loss, F1) are computed on a centrally
+          held test split. No hospital-specific performance data is exposed to other participants.
+        </div>
+      </div>
+      <div class="card red">
+        <div class="card-icon">&#x1F6AB;</div>
+        <div class="card-title">No Centralized Data Collection</div>
+        <div class="card-body">
+          Unlike traditional cloud ML, there is no step where patient images are uploaded
+          to any external server, cloud storage, or third-party API.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Round-by-round walkthrough -->
+  <div class="section">
+    <div class="section-label">Training Lifecycle</div>
+    <div class="section-title">Round-by-round privacy walkthrough</div>
+    <div class="panel">
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot">&#x1F310;</div>
+          <div class="tl-content">
+            <div class="tl-title">Global Model Distributed</div>
+            <div class="tl-body">
+              The server publishes the current global model weights via <code>GET /fl/model</code>.
+              All participating hospitals download the same starting checkpoint.
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">&#x1F512;</div>
+          <div class="tl-content">
+            <div class="tl-title">Local Training (Fully Private)</div>
+            <div class="tl-body">
+              Each hospital trains the model on its own NORMAL/PNEUMONIA images for N epochs.
+              This entire process happens inside the hospital's own hardware.
+              No network traffic occurs during training.
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">&#x2696;&#xFE0F;</div>
+          <div class="tl-content">
+            <div class="tl-title">Weight Upload (Authenticated)</div>
+            <div class="tl-body">
+              The hospital submits only the trained weight tensor file (.pt) along with
+              its sample count and Bearer token via <code>POST /fl/submit-update</code>.
+              The token is validated server-side before the upload is accepted.
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">&#x1F9EE;</div>
+          <div class="tl-content">
+            <div class="tl-title">FedAvg Aggregation</div>
+            <div class="tl-body">
+              The admin triggers aggregation. The server computes a sample-count-weighted
+              average of all submitted weight tensors. The result is a new global model
+              that has learned from every hospital's data without seeing any single pixel.
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">&#x1F5D1;&#xFE0F;</div>
+          <div class="tl-content">
+            <div class="tl-title">Updates Cleared</div>
+            <div class="tl-body">
+              After aggregation, all individual hospital weight files are deleted from the server
+              (when <code>clear_updates=true</code>). Only the averaged global model is retained.
+              Round submission records are also cleared.
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot">&#x1F4CA;</div>
+          <div class="tl-content">
+            <div class="tl-title">Evaluation on Held-Out Test Set</div>
+            <div class="tl-body">
+              The new global model is evaluated on a separate held-out test set
+              (configured in <code>config.py &#x2192; TEST_DIR</code>).
+              Results (accuracy, F1, confusion matrix) are stored in <code>evaluation_report.json</code>
+              and displayed in the admin dashboard.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- DP Roadmap -->
+  <div class="section">
+    <div class="section-label">Future Work</div>
+    <div class="section-title">Differential Privacy Roadmap</div>
+    <div class="section-body" style="margin-bottom:24px">
+      The current system provides <strong>data locality</strong> as its primary privacy guarantee.
+      A stronger formal guarantee &mdash; <strong>Differential Privacy (DP)</strong> &mdash; can be layered on
+      top through Gaussian noise injection on gradients before submission.
+    </div>
+    <div class="dp-box">
+      <div class="dp-header">
+        <div class="dp-icon">&#x1F52C;</div>
+        <div class="dp-header-text">
+          <h3>Planned: DP-SGD Integration</h3>
+          <p>Formal (&epsilon;, &delta;)-differential privacy for federated weight updates</p>
+        </div>
+      </div>
+      <div class="dp-grid">
+        <div class="dp-item">
+          <div class="dp-step">Step 1</div>
+          <div class="dp-item-title">Per-sample Gradient Clipping</div>
+          <div class="dp-item-body">
+            Clip each sample's gradient norm to a fixed bound <em>C</em> before
+            accumulating. Prevents any single image from dominating the weight update.
+          </div>
+        </div>
+        <div class="dp-item">
+          <div class="dp-step">Step 2</div>
+          <div class="dp-item-title">Gaussian Noise Addition</div>
+          <div class="dp-item-body">
+            Add calibrated Gaussian noise &sigma; &middot; &#x1D4A9;(0, I) to the clipped gradient sum.
+            Noise magnitude is proportional to C/batch_size and privacy budget &epsilon;.
+          </div>
+        </div>
+        <div class="dp-item">
+          <div class="dp-step">Step 3</div>
+          <div class="dp-item-title">Privacy Budget (&epsilon;) Accounting</div>
+          <div class="dp-item-body">
+            Track cumulative privacy expenditure across training rounds using
+            R&eacute;nyi Differential Privacy (RDP) accountant (via Opacus library).
+          </div>
+        </div>
+        <div class="dp-item">
+          <div class="dp-step">Step 4</div>
+          <div class="dp-item-title">Server-side Verification</div>
+          <div class="dp-item-body">
+            Optionally verify that each hospital's submitted update was produced with
+            noise consistent with the agreed &epsilon; budget via cryptographic proof or audit log.
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px;padding:14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:13px;color:var(--muted)">
+        <strong style="color:var(--text)">Recommended library:</strong>
+        <a href="https://opacus.ai" target="_blank" rel="noopener"
+           style="color:#818cf8;text-decoration:none;margin-left:6px">PyTorch Opacus &#x2197;</a>
+        &mdash; A PyTorch-native DP-SGD implementation with automatic RDP accounting,
+        gradient clipping hooks, and R&eacute;nyi Differential Privacy analysis tools.
+        Drop-in replacement for standard Adam/SGD optimizers.
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Limitations -->
+  <div class="section">
+    <div class="section-label">Honest Assessment</div>
+    <div class="section-title">Current Limitations</div>
+    <div class="two-col">
+      <div class="card amber">
+        <div class="card-icon">&#x26A0;&#xFE0F;</div>
+        <div class="card-title">No Formal DP Guarantee</div>
+        <div class="card-body">
+          The current system provides data locality but not formal differential privacy.
+          Gradient-based model inversion attacks remain theoretically possible without
+          noise injection.
+        </div>
+      </div>
+      <div class="card amber">
+        <div class="card-icon">&#x26A0;&#xFE0F;</div>
+        <div class="card-title">Plain-text Password Storage</div>
+        <div class="card-body">
+          Hospital passwords are stored as plain text in <code>hospitals.json</code>.
+          Production deployment should hash passwords with bcrypt or Argon2.
+        </div>
+      </div>
+      <div class="card amber">
+        <div class="card-icon">&#x26A0;&#xFE0F;</div>
+        <div class="card-title">No TLS Encryption</div>
+        <div class="card-body">
+          The server runs over plain HTTP. In production, all endpoints must be
+          served over HTTPS with a valid TLS certificate to protect weights in transit.
+        </div>
+      </div>
+      <div class="card amber">
+        <div class="card-icon">&#x26A0;&#xFE0F;</div>
+        <div class="card-title">File-based State</div>
+        <div class="card-body">
+          Hospital registry and round state are stored in JSON files.
+          A production system should use a proper database with
+          access controls and audit logging.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+</body>
+</html>
