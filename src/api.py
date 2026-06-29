@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 from torch import nn
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
@@ -20,6 +20,26 @@ from data_utils import eval_transforms, make_loader
 from metrics_store import get_all_metrics, save_baseline_metrics, save_round_metrics
 from model import build_model, load_checkpoint, save_checkpoint
 from train_utils import evaluate, fedavg
+
+from pydantic import BaseModel
+
+from auth_store import (
+    clear_round_state, get_round_state, has_submitted,
+    list_hospitals, login_hospital, mark_submitted,
+    register_hospital, validate_token,
+)
+
+
+class HospitalRegisterRequest(BaseModel):
+    """Request body for hospital registration."""
+    name: str
+    password: str
+
+
+class HospitalLoginRequest(BaseModel):
+    """Request body for hospital login (name + password)."""
+    name: str
+    password: str
 
 
 MODEL_PATH = MODELS_DIR / "xray_global.pt"
@@ -129,6 +149,7 @@ def download_global_model():
 
 @app.post("/fl/submit-update")
 async def submit_update(
+    request: Request,
     file: UploadFile = File(...),
     hospital_name: str = Form(...),
     sample_count: int = Form(...),
@@ -136,6 +157,31 @@ async def submit_update(
 ):
     if sample_count <= 0:
         raise HTTPException(status_code=400, detail="sample_count must be greater than zero.")
+
+    # ── Token validation (Mandatory) ──
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing Authorization header. Please register or login to submit updates.",
+        )
+    token = auth_header[7:].strip()
+    if not validate_token(hospital_name, token):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token for this hospital. Please re-login.",
+        )
+
+    # ── Duplicate submission prevention ────────────────────────────────────
+    hospital_key = safe_name(hospital_name)
+    if has_submitted(round_id, hospital_key):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Hospital '{hospital_name}' has already submitted weights for "
+                f"round '{round_id}'. Wait for the admin to aggregate before re-submitting."
+            ),
+        )
 
     round_dir = FL_STORAGE_DIR / safe_name(round_id)
     round_dir.mkdir(parents=True, exist_ok=True)
@@ -162,6 +208,8 @@ async def submit_update(
         },
         update_path,
     )
+
+    mark_submitted(round_id, hospital_key, hospital_name)
 
     return {
         "status": "received",
@@ -251,6 +299,7 @@ def aggregate_updates(round_id: str = Query("current"), clear_updates: bool = Qu
 
     if clear_updates:
         shutil.rmtree(round_dir)
+    clear_round_state(round_id)  # always reset submission tracking after aggregation
 
     return {
         "status": "aggregated",
@@ -345,3 +394,73 @@ async def predict(file: UploadFile = File(...)):
             for class_name, probability in zip(CLASS_NAMES, probabilities.tolist())
         ],
     }
+
+
+# ── Hospital portal ───────────────────────────────────────────────────────────
+
+@app.get("/hospital")
+def hospital_portal():
+    """Serve the hospital web portal (register, login, check round status)."""
+    html_path = STATIC_DIR / "hospital.html"
+    if not html_path.exists():
+        raise HTTPException(status_code=404, detail="hospital.html not found.")
+    return FileResponse(html_path)
+
+
+@app.post("/hospital/register")
+def hospital_register(body: HospitalRegisterRequest):
+    """Register a new hospital. Returns {status, name, key, token}."""
+    name = body.name.strip()
+    password = body.password.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Hospital name cannot be empty.")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password cannot be empty.")
+    try:
+        entry = register_hospital(name, password)
+        return {
+            "status": "registered",
+            "name": entry["name"],
+            "key":  entry["key"],
+            "token": entry["token"],
+            "registered_at": entry["registered_at"],
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post("/hospital/login")
+def hospital_login(body: HospitalLoginRequest):
+    """Login with name + password. Returns {status, name, key, token} on success."""
+    name = body.name.strip()
+    password = body.password.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Hospital name cannot be empty.")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password cannot be empty.")
+    try:
+        entry = login_hospital(name, password)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    return {
+        "status": "ok",
+        "name": entry["name"],
+        "key":  entry["key"],
+        "token": entry["token"],
+        "registered_at": entry["registered_at"],
+    }
+
+
+@app.get("/hospital/list")
+def hospital_list():
+    """Return all registered hospitals (token omitted for privacy)."""
+    return [
+        {"name": h["name"], "key": h["key"], "registered_at": h["registered_at"]}
+        for h in list_hospitals()
+    ]
+
+
+@app.get("/fl/round-state")
+def round_state(round_id: str = Query("current")):
+    """Return which hospitals have already submitted for the given round."""
+    return {"round_id": round_id, **get_round_state(round_id)}

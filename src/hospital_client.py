@@ -43,6 +43,8 @@ def train_local_update(
     lr=DEFAULT_LR,
     force_cpu=False,
     logger=None,
+    on_epoch=None,
+    on_batch=None,
 ):
     dataset_dir = Path(dataset_dir)
     output_path = Path(output_path)
@@ -56,7 +58,10 @@ def train_local_update(
 
     local_model = build_model(pretrained=False).to(device)
     load_checkpoint(local_model, str(global_model_path), device)
-    train_model(local_model, train_loader, device=device, epochs=epochs, lr=lr)
+    train_model(
+        local_model, train_loader, device=device, epochs=epochs, lr=lr,
+        on_epoch=on_epoch, on_batch=on_batch,
+    )
 
     torch.save(
         {
@@ -70,9 +75,16 @@ def train_local_update(
     return output_path, len(train_dataset)
 
 
-def submit_update(server_url, update_path, hospital_name, sample_count, round_id="current", logger=None):
+def submit_update(
+    server_url, update_path, hospital_name, sample_count,
+    round_id="current", token=None, logger=None,
+):
     url = f"{server_url.rstrip('/')}/fl/submit-update"
     log_message(f"Submitting weights to {url}", logger)
+
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     with Path(update_path).open("rb") as update_file:
         response = requests.post(
@@ -83,9 +95,49 @@ def submit_update(server_url, update_path, hospital_name, sample_count, round_id
                 "sample_count": str(sample_count),
                 "round_id": round_id,
             },
+            headers=headers,
             timeout=300,
         )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        try:
+            detail = exc.response.json().get("detail", str(exc))
+        except Exception:
+            detail = str(exc)
+        raise RuntimeError(detail) from exc
+    return response.json()
+
+
+def register_hospital(server_url, hospital_name, password, logger=None):
+    """Register a new hospital with the central server. Returns {name, token}."""
+    url = f"{server_url.rstrip('/')}/hospital/register"
+    log_message(f"Registering '{hospital_name}' at {url}", logger)
+    response = requests.post(url, json={"name": hospital_name, "password": password}, timeout=30)
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        try:
+            detail = exc.response.json().get("detail", str(exc))
+        except Exception:
+            detail = str(exc)
+        raise RuntimeError(detail) from exc
+    return response.json()
+
+
+def login_hospital(server_url, hospital_name, password, logger=None):
+    """Login with name + password. Returns {name, token} on success."""
+    url = f"{server_url.rstrip('/')}/hospital/login"
+    log_message(f"Logging in as '{hospital_name}' at {url}", logger)
+    response = requests.post(url, json={"name": hospital_name, "password": password}, timeout=30)
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        try:
+            detail = exc.response.json().get("detail", str(exc))
+        except Exception:
+            detail = str(exc)
+        raise RuntimeError(detail) from exc
     return response.json()
 
 
@@ -99,7 +151,10 @@ def train_and_submit(
     lr=DEFAULT_LR,
     work_dir="client_work",
     force_cpu=False,
+    token=None,
     logger=None,
+    on_epoch=None,
+    on_batch=None,
 ):
     hospital_key = "".join(char if char.isalnum() or char in ("-", "_") else "_" for char in hospital_name)
     client_dir = Path(work_dir) / (hospital_key or "hospital")
@@ -116,6 +171,8 @@ def train_and_submit(
         lr=lr,
         force_cpu=force_cpu,
         logger=logger,
+        on_epoch=on_epoch,
+        on_batch=on_batch,
     )
     result = submit_update(
         server_url=server_url,
@@ -123,6 +180,7 @@ def train_and_submit(
         hospital_name=hospital_name,
         sample_count=sample_count,
         round_id=round_id,
+        token=token,
         logger=logger,
     )
     log_message(f"Server response: {result}", logger)
@@ -139,6 +197,7 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--lr", type=float, default=DEFAULT_LR)
     parser.add_argument("--cpu", action="store_true")
+    parser.add_argument("--token", help="Bearer token for authentication", default=None)
     return parser.parse_args()
 
 
@@ -153,6 +212,7 @@ def main():
         batch_size=args.batch_size,
         lr=args.lr,
         force_cpu=args.cpu,
+        token=args.token,
     )
 
 

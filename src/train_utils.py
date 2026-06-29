@@ -6,13 +6,14 @@ from torch import nn
 from tqdm import tqdm
 
 
-def train_one_epoch(model, loader, optimizer, criterion, device):
+def train_one_epoch(model, loader, optimizer, criterion, device, on_batch=None):
     model.train()
     total_loss = 0.0
     correct = 0
     total = 0
+    total_batches = len(loader)
 
-    for images, labels in tqdm(loader, desc="train", leave=False):
+    for batch_idx, (images, labels) in enumerate(tqdm(loader, desc="train", leave=False)):
         images = images.to(device)
         labels = labels.to(device)
 
@@ -25,6 +26,14 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
         total_loss += loss.item() * images.size(0)
         correct += (outputs.argmax(dim=1) == labels).sum().item()
         total += labels.size(0)
+
+        if on_batch is not None:
+            on_batch(
+                batch=batch_idx + 1,
+                total_batches=total_batches,
+                loss=total_loss / max(total, 1),
+                accuracy=correct / max(total, 1),
+            )
 
     return {
         "loss": total_loss / max(total, 1),
@@ -57,18 +66,22 @@ def evaluate(model, loader, criterion, device):
     }
 
 
-def train_model(model, train_loader, device, epochs, lr):
+def train_model(model, train_loader, device, epochs, lr, on_epoch=None, on_batch=None):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     history = []
 
     for epoch in range(1, epochs + 1):
-        metrics = train_one_epoch(model, train_loader, optimizer, criterion, device)
+        metrics = train_one_epoch(
+            model, train_loader, optimizer, criterion, device, on_batch=on_batch
+        )
         history.append(metrics)
         print(
             f"epoch={epoch} loss={metrics['loss']:.4f} "
             f"accuracy={metrics['accuracy']:.4f} samples={metrics['samples']}"
         )
+        if on_epoch is not None:
+            on_epoch(epoch=epoch, total_epochs=epochs, metrics=metrics)
 
     return history
 

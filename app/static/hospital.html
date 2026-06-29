@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hospital Portal — Federated Learning</title>
+  <meta name="description" content="Hospital registration, login, and round status portal for the federated X-ray pneumonia detection system.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #09090b;
+      --surface:     #111115;
+      --surface-2:   #18181b;
+      --surface-3:   #27272a;
+      --border:      rgba(255,255,255,0.07);
+      --border-h:    rgba(99,102,241,0.40);
+      --text:        #f4f4f5;
+      --muted:       #a1a1aa;
+      --dim:         #71717a;
+      --accent:      #6366f1;
+      --accent-dark: #4f46e5;
+      --accent-bg:   rgba(99,102,241,0.12);
+      --success:     #22c55e;
+      --success-bg:  rgba(34,197,94,0.10);
+      --warning:     #f59e0b;
+      --warning-bg:  rgba(245,158,11,0.10);
+      --danger:      #ef4444;
+      --danger-bg:   rgba(239,68,68,0.10);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell {
+      width: min(1100px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+
+    .brand-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+      display: grid; place-items: center;
+      font-size: 20px; flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(34,197,94,0.22);
+    }
+
+    .brand-text h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+    .brand-text p  { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+
+    .nav-links { display: flex; align-items: center; gap: 20px; }
+
+    .nav-link {
+      color: var(--muted); text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: color .15s;
+    }
+    .nav-link:hover { color: var(--text); }
+
+    /* ── Stats row ─────────────────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border-h); }
+
+    .stat-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px; font-weight: 800;
+      letter-spacing: -.04em; line-height: 1;
+    }
+    .stat-value.ok      { color: var(--success); }
+    .stat-value.accent  { color: var(--accent);  }
+    .stat-value.warn    { color: var(--warning);  }
+
+    /* ── Layout: two-column ────────────────────────────────────────────── */
+    .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    /* ── Panel ─────────────────────────────────────────────────────────── */
+    .panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      margin: 0 0 18px;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; gap: 9px;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+    /* ── Tabs ──────────────────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      background: var(--surface-3);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      flex: 1; text-align: center;
+      padding: 8px 0;
+      border: 0; border-radius: 7px;
+      font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      background: transparent;
+      color: var(--dim);
+      transition: all .15s;
+    }
+
+    .tab.active {
+      background: var(--surface-2);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    }
+
+    /* ── Form ──────────────────────────────────────────────────────────── */
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px; font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .field input:focus { border-color: var(--accent); }
+
+    /* ── Buttons ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 0; border-radius: 9px;
+      padding: 10px 16px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all .15s;
+      white-space: nowrap; line-height: 1;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      box-shadow: 0 0 18px rgba(99,102,241,.35);
+    }
+
+    .btn-secondary {
+      background: var(--surface-3); color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); }
+
+    .btn-success {
+      background: var(--success-bg); color: var(--success);
+      border: 1px solid rgba(34,197,94,.20);
+    }
+    .btn-success:hover { background: rgba(34,197,94,.18); }
+
+    .btn:disabled { opacity: .38; cursor: not-allowed; pointer-events: none; }
+    .btn-block { width: 100%; justify-content: center; }
+
+    /* ── Token box ─────────────────────────────────────────────────────── */
+    .token-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      display: none;
+    }
+
+    .token-box.visible { display: block; }
+
+    .token-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 8px;
+    }
+
+    .token-value {
+      font-family: 'Consolas', monospace;
+      font-size: 12px; color: var(--accent);
+      word-break: break-all;
+      margin-bottom: 10px;
+    }
+
+    /* ── Status / Alert ────────────────────────────────────────────────── */
+    .status-msg {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      margin-top: 12px;
+      display: none;
+    }
+    .status-msg.visible  { display: block; }
+    .status-msg.success  { background: var(--success-bg); color: var(--success); }
+    .status-msg.error    { background: var(--danger-bg);  color: var(--danger);  }
+    .status-msg.info     { background: var(--accent-bg);  color: var(--accent);  }
+    .status-msg.warning  { background: var(--warning-bg); color: var(--warning); }
+
+    /* ── Hospital chips ────────────────────────────────────────────────── */
+    .hospital-chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+
+    .chip-submitted { background: var(--success-bg); color: var(--success); }
+    .chip-pending   { background: var(--surface-3);  color: var(--dim);     }
+
+    /* ── Table ─────────────────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    th {
+      text-align: left; padding: 9px 12px;
+      color: var(--dim);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.025); }
+
+    /* ── Badge ─────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-accent  { background: var(--accent-bg);  color: var(--accent);  }
+
+    /* ── Section header ────────────────────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+
+    /* ── Empty state ───────────────────────────────────────────────────── */
+    .empty { text-align: center; padding: 24px; color: var(--dim); font-size: 13px; }
+
+    /* ── Spinner ───────────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 11px; height: 11px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin .55s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.45; transform:scale(.75); }
+    }
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .cols { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .stats-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🏥</div>
+      <div class="brand-text">
+        <h1>Hospital Portal</h1>
+        <p>Federated Learning · X-ray Pneumonia Detection</p>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">← Prediction</a>
+      <a href="/admin" class="nav-link">Admin Dashboard</a>
+    </nav>
+  </header>
+
+  <!-- ── Stats row ──────────────────────────────────────────────────────── -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Registered Hospitals</div>
+      <div class="stat-value accent" id="hospitalCount">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Submitted This Round</div>
+      <div class="stat-value ok" id="submittedCount">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Auth Status</div>
+      <div class="stat-value warn" id="myAuthStatus">—</div>
+    </div>
+  </div>
+
+  <!-- ── Two-column layout ──────────────────────────────────────────────── -->
+  <div class="cols">
+
+    <!-- ── Left: Auth panel ─────────────────────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <h2 class="panel-title">🔐 Hospital Authentication</h2>
+
+        <!-- Tab bar -->
+        <div class="tab-bar" role="tablist">
+          <button class="tab active" id="tabRegister" onclick="switchTab('register')" role="tab">
+            Register
+          </button>
+          <button class="tab" id="tabLogin" onclick="switchTab('login')" role="tab">
+            Login
+          </button>
+        </div>
+
+        <!-- Register form -->
+        <div id="formRegister">
+          <div class="field">
+            <label for="regName">Hospital Name</label>
+            <input id="regName" type="text" placeholder="e.g. City General Hospital" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="regPassword">Password</label>
+            <input id="regPassword" type="password" placeholder="Choose a password">
+          </div>
+          <button class="btn btn-primary btn-block" id="regBtn" onclick="doRegister()">
+            Register Hospital
+          </button>
+          <div class="status-msg" id="regMsg"></div>
+        </div>
+
+        <!-- Login form (hidden by default) -->
+        <div id="formLogin" style="display:none">
+          <div class="field">
+            <label for="loginName">Hospital Name</label>
+            <input id="loginName" type="text" placeholder="e.g. City General Hospital" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" placeholder="Your password">
+          </div>
+          <button class="btn btn-success btn-block" id="loginBtn" onclick="doLogin()">
+            Login &amp; Retrieve Token
+          </button>
+          <div class="status-msg" id="loginMsg"></div>
+        </div>
+
+        <!-- Token result (shown after success) -->
+        <div class="token-box" id="tokenBox">
+          <div class="token-label">Your Token — keep this private</div>
+          <div class="token-value" id="tokenValue"></div>
+          <button class="btn btn-secondary" onclick="copyToken()" id="copyBtn">
+            📋 Copy Token
+          </button>
+          <p style="font-size:11px;color:var(--dim);margin:8px 0 0">
+            Use this token in the hospital desktop app to authenticate submissions.
+          </p>
+        </div>
+      </div>
+
+      <!-- ── Round status panel ─────────────────────────────────────────── -->
+      <div class="panel">
+        <div class="section-header">
+          <h2 class="panel-title" style="margin:0">
+            <span class="pulse-dot"></span>
+            Round Submission Status
+          </h2>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="roundIdInput" type="text" value="current"
+              style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                     padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none;width:100px"
+              oninput="loadRoundState()">
+            <button class="btn btn-secondary" onclick="loadRoundState()">↻</button>
+          </div>
+        </div>
+
+        <div id="roundStatusArea">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: Hospital registry ───────────────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="section-header">
+          <h2 class="panel-title" style="margin:0">🏛 Registered Hospitals</h2>
+          <button class="btn btn-secondary" onclick="loadHospitals()">↻ Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Hospital</th>
+              <th>Key</th>
+              <th>Registered</th>
+            </tr>
+          </thead>
+          <tbody id="hospitalTableBody"></tbody>
+        </table>
+        <div class="empty" id="hospitalEmpty">No hospitals registered yet.</div>
+      </div>
+
+      <!-- ── Instructions ───────────────────────────────────────────────── -->
+      <div class="panel">
+        <h2 class="panel-title">📋 How to Participate</h2>
+        <ol style="color:var(--muted);font-size:13px;line-height:1.9;padding-left:18px;margin:0">
+          <li>Register your hospital above to get a unique token.</li>
+          <li>Open the Hospital Desktop App on your machine.</li>
+          <li>Enter your hospital name and <strong>Login</strong> to retrieve the token.</li>
+          <li>Point the app to your local X-ray dataset folder.</li>
+          <li>Click <strong>Train &amp; Submit</strong> — the app handles everything.</li>
+          <li>Wait for the admin to aggregate all hospital updates.</li>
+          <li>Repeat from step 3 for the next federated round.</li>
+        </ol>
+        <div class="divider"></div>
+        <p style="font-size:12px;color:var(--dim);margin:0">
+          <strong style="color:var(--warning)">Privacy note:</strong>
+          Only model weight updates are shared — never your raw patient images.
+          The server cannot reconstruct your data from the weight deltas.
+        </p>
+      </div>
+    </div>
+  </div><!-- /cols -->
+
+</div><!-- /shell -->
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentToken = sessionStorage.getItem('hospitalToken') || null;
+  let currentHospitalName = sessionStorage.getItem('hospitalName') || null;
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('formRegister').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('formLogin').style.display    = tab === 'login'    ? '' : 'none';
+  }
+
+  // ── Show message ──────────────────────────────────────────────────────────
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = `status-msg visible ${type}`;
+  }
+
+  function hideMsg(id) {
+    document.getElementById(id).className = 'status-msg';
+  }
+
+  // ── Show token ────────────────────────────────────────────────────────────
+  function showToken(token, name) {
+    currentToken = token;
+    currentHospitalName = name;
+    sessionStorage.setItem('hospitalToken', token);
+    sessionStorage.setItem('hospitalName', name);
+    document.getElementById('tokenValue').textContent = token;
+    document.getElementById('tokenBox').classList.add('visible');
+    document.getElementById('myAuthStatus').textContent = '✓';
+    document.getElementById('myAuthStatus').style.color = 'var(--success)';
+  }
+
+  // ── Copy token ────────────────────────────────────────────────────────────
+  function copyToken() {
+    const token = document.getElementById('tokenValue').textContent;
+    navigator.clipboard.writeText(token).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.innerHTML = '📋 Copy Token'; }, 2000);
+    });
+  }
+
+  // ── Register ──────────────────────────────────────────────────────────────
+  async function doRegister() {
+    const name     = document.getElementById('regName').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    if (!name)     { showMsg('regMsg', 'Please enter a hospital name.', 'error'); return; }
+    if (!password) { showMsg('regMsg', 'Please enter a password.', 'error'); return; }
+
+    const btn = document.getElementById('regBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Registering…';
+    hideMsg('regMsg');
+
+    try {
+      const res  = await fetch('/hospital/register', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Registration failed.');
+
+      document.getElementById('regPassword').value = '';
+      showMsg('regMsg', `✅ Registered successfully as "${data.name}"`, 'success');
+      showToken(data.token, data.name);
+      await Promise.all([loadHospitals(), loadRoundState()]);
+    } catch (err) {
+      showMsg('regMsg', `❌ ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Register Hospital';
+    }
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const name     = document.getElementById('loginName').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!name)     { showMsg('loginMsg', 'Please enter a hospital name.', 'error'); return; }
+    if (!password) { showMsg('loginMsg', 'Please enter your password.', 'error'); return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Logging in…';
+    hideMsg('loginMsg');
+
+    try {
+      const res  = await fetch('/hospital/login', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Login failed.');
+
+      document.getElementById('loginPassword').value = '';
+      showMsg('loginMsg', `✅ Logged in as "${data.name}"`, 'success');
+      showToken(data.token, data.name);
+    } catch (err) {
+      showMsg('loginMsg', `❌ ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Login &amp; Retrieve Token';
+    }
+  }
+
+  // ── Load hospitals ────────────────────────────────────────────────────────
+  async function loadHospitals() {
+    try {
+      const res  = await fetch('/hospital/list');
+      const data = await res.json();
+      const tbody = document.getElementById('hospitalTableBody');
+      const empty = document.getElementById('hospitalEmpty');
+
+      document.getElementById('hospitalCount').textContent = data.length;
+      tbody.innerHTML = '';
+
+      if (data.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      for (const h of data) {
+        const ts = new Date(h.registered_at * 1000).toLocaleString([], {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        });
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td><strong>${h.name}</strong></td>
+            <td style="font-family:monospace;font-size:11px;color:var(--dim)">${h.key}</td>
+            <td style="font-size:12px;color:var(--dim)">${ts}</td>
+          </tr>
+        `);
+      }
+    } catch (e) {
+      console.warn('[hospitals]', e.message);
+    }
+  }
+
+  // ── Load round state ──────────────────────────────────────────────────────
+  async function loadRoundState() {
+    const rid  = document.getElementById('roundIdInput').value || 'current';
+    const area = document.getElementById('roundStatusArea');
+
+    try {
+      const [stateRes, hospitalsRes] = await Promise.all([
+        fetch(`/fl/round-state?round_id=${encodeURIComponent(rid)}`),
+        fetch('/hospital/list'),
+      ]);
+      const state     = await stateRes.json();
+      const hospitals = await hospitalsRes.json();
+
+      const submittedKeys = new Set(state.submitted || []);
+      const submittedNames = state.names || [];
+      document.getElementById('submittedCount').textContent = submittedNames.length;
+
+      if (hospitals.length === 0) {
+        area.innerHTML = '<div class="empty">No hospitals registered yet.</div>';
+        return;
+      }
+
+      let html = '<div class="hospital-chips">';
+      for (const h of hospitals) {
+        const done = submittedKeys.has(h.key);
+        html += `<span class="chip ${done ? 'chip-submitted' : 'chip-pending'}">
+                   ${done ? '✅' : '⏳'} ${h.name}
+                 </span>`;
+      }
+      // Any submitted that aren't in the registry (legacy)
+      for (const name of submittedNames) {
+        const inRegistry = hospitals.some(h => h.name === name);
+        if (!inRegistry) {
+          html += `<span class="chip chip-submitted">✅ ${name}</span>`;
+        }
+      }
+      html += '</div>';
+
+      if (submittedNames.length === 0) {
+        html += '<p style="font-size:12px;color:var(--dim);margin:10px 0 0">No hospitals have submitted for this round yet.</p>';
+      }
+
+      area.innerHTML = html;
+    } catch (e) {
+      area.innerHTML = '<div class="empty">Could not load round state.</div>';
+      console.warn('[round-state]', e.message);
+    }
+  }
+
+  // ── Restore session ───────────────────────────────────────────────────────
+  function restoreSession() {
+    if (currentToken && currentHospitalName) {
+      document.getElementById('tokenValue').textContent = currentToken;
+      document.getElementById('tokenBox').classList.add('visible');
+      document.getElementById('myAuthStatus').textContent = '✓';
+      document.getElementById('myAuthStatus').style.color = 'var(--success)';
+    } else {
+      document.getElementById('myAuthStatus').textContent = 'Not auth';
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  restoreSession();
+  loadHospitals();
+  loadRoundState();
+  setInterval(loadRoundState, 15000);   // auto-refresh round state every 15 s
+</script>
+</body>
+</html>
