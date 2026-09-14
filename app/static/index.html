@@ -3,19 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>X-ray Pneumonia Detection</title>
+  <title>Explainable Federated AI — Chest X-ray Pneumonia Detection</title>
   <style>
     :root {
-      color-scheme: light;
-      --bg: #f5f7fb;
-      --panel: #ffffff;
-      --ink: #172033;
-      --muted: #62708a;
-      --line: #d9e0ea;
-      --accent: #0f766e;
-      --accent-dark: #0b5f59;
-      --danger: #b42318;
-      --ok: #067647;
+      --bg: #0b0f19;
+      --panel: #111827;
+      --panel-border: #1f293d;
+      --card: #162032;
+      --ink: #f1f5f9;
+      --muted: #94a3b8;
+      --line: #2d3748;
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.25);
+      --accent-dark: #0891b2;
+      --danger: #f43f5e;
+      --danger-bg: rgba(244, 63, 94, 0.12);
+      --ok: #10b981;
+      --ok-bg: rgba(16, 185, 129, 0.12);
+      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
 
     * {
@@ -25,15 +30,15 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
+      font-family: var(--font);
+      background: radial-gradient(circle at top right, #132238 0%, #0b0f19 70%);
       color: var(--ink);
     }
 
     .shell {
-      width: min(1040px, calc(100% - 32px));
+      width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 0;
+      padding: 32px 0 48px;
     }
 
     header {
@@ -41,19 +46,40 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 14px var(--accent-glow);
     }
 
     h1 {
       margin: 0;
-      font-size: 28px;
-      letter-spacing: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
-    a {
-      color: var(--accent);
-      font-weight: 700;
-      text-decoration: none;
+    .subtitle {
+      margin: 3px 0 0;
+      font-size: 13px;
+      color: var(--muted);
     }
 
     .header-actions {
@@ -61,69 +87,188 @@
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      justify-content: flex-end;
     }
 
-    .status {
-      border: 1px solid var(--line);
-      background: var(--panel);
-      border-radius: 8px;
-      padding: 8px 12px;
+    .nav-btn {
       color: var(--muted);
+      font-weight: 600;
       font-size: 14px;
-      white-space: nowrap;
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: var(--card);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .status-badge {
+      border: 1px solid var(--panel-border);
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+    .status-dot.online {
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok);
     }
 
     main {
       display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 20px;
+      grid-template-columns: 1fr 390px;
+      gap: 24px;
       align-items: start;
     }
 
     .panel {
       background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 20px;
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     }
 
-    .dropzone {
-      min-height: 430px;
-      border: 2px dashed #aeb9c9;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      background: #fbfcfe;
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    /* ── Image Viewer & Dropzone ────────────────────────────── */
+    .viewer-container {
+      background: #060911;
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      min-height: 440px;
       position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
-    .dropzone.has-image {
-      border-style: solid;
-      background: #111827;
+    .image-stage {
+      width: 100%;
+      height: 440px;
+      display: none;
+      position: relative;
+      background: #000;
     }
 
-    .dropzone img {
+    .image-stage img {
       width: 100%;
       height: 100%;
-      max-height: 560px;
       object-fit: contain;
-      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transition: opacity 0.15s ease;
     }
 
-    .dropzone.has-image img {
+    .viewer-container.has-image .image-stage {
       display: block;
     }
 
-    .placeholder {
-      text-align: center;
-      color: var(--muted);
-      padding: 24px;
+    .viewer-container.has-image .drop-prompt {
+      display: none;
     }
 
-    .dropzone.has-image .placeholder {
+    .drop-prompt {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .drop-icon {
+      font-size: 42px;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    /* ── Mode Switcher & Controls ───────────────────────────── */
+    .view-switcher {
       display: none;
+      gap: 6px;
+      margin-top: 14px;
+      background: var(--card);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .viewer-container.has-result + .view-switcher {
+      display: flex;
+    }
+
+    .view-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .view-btn.active {
+      background: var(--accent);
+      color: #0b0f19;
+      font-weight: 700;
+    }
+
+    .slider-row {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .slider-row.visible {
+      display: flex;
+    }
+
+    .slider-row label {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
     }
 
     .controls {
@@ -137,108 +282,179 @@
       display: none;
     }
 
-    button,
-    .file-button {
+    .btn {
       border: 0;
       border-radius: 8px;
-      padding: 12px 16px;
+      padding: 11px 18px;
       font-weight: 700;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
     }
 
-    .file-button {
-      background: #e7edf5;
+    .btn-secondary {
+      background: var(--card);
       color: var(--ink);
+      border: 1px solid var(--panel-border);
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
-    button {
-      background: var(--accent);
-      color: white;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
+      color: #0b0f19;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #22d3ee 0%, var(--accent) 100%);
     }
 
-    button:hover {
-      background: var(--accent-dark);
-    }
-
-    button:disabled {
-      opacity: 0.55;
+    .btn:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
-    .result-title {
-      margin: 0 0 12px;
-      font-size: 18px;
+    /* ── Right Panel: Diagnostic Results ────────────────────── */
+    .prediction-card {
+      background: var(--card);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+      text-align: center;
     }
 
-    .prediction {
-      margin: 0 0 8px;
-      font-size: 34px;
+    .prediction-label {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .prediction-value {
+      font-size: 30px;
       font-weight: 800;
-      letter-spacing: 0;
+      letter-spacing: -0.02em;
+      margin: 0 0 6px;
+      color: var(--muted);
     }
 
-    .prediction.normal {
+    .prediction-value.normal {
       color: var(--ok);
     }
 
-    .prediction.pneumonia {
+    .prediction-value.pneumonia {
       color: var(--danger);
     }
 
-    .confidence {
+    .confidence-badge {
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
       color: var(--muted);
-      margin-bottom: 20px;
+    }
+
+    .bar-section {
+      margin-top: 18px;
     }
 
     .bar-row {
-      margin: 14px 0;
+      margin-bottom: 14px;
     }
 
     .bar-label {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 6px;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--muted);
+      margin-bottom: 6px;
     }
 
-    .bar {
-      height: 12px;
-      background: #e8edf4;
+    .bar-track {
+      height: 10px;
+      background: #1e293b;
       border-radius: 999px;
       overflow: hidden;
     }
 
-    .bar span {
-      display: block;
+    .bar-fill {
       height: 100%;
       width: 0%;
-      background: var(--accent);
-      transition: width 180ms ease;
+      border-radius: 999px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .bar-fill.normal {
+      background: var(--ok);
+    }
+    .bar-fill.pneumonia {
+      background: var(--danger);
     }
 
-    .error {
-      color: var(--danger);
+    /* ── XAI Saliency Card ──────────────────────────────────── */
+    .xai-card {
+      background: rgba(6, 182, 212, 0.04);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 18px;
+    }
+
+    .xai-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
       font-weight: 700;
-      margin-top: 16px;
-      min-height: 20px;
+      font-size: 14px;
+      margin-bottom: 8px;
     }
 
-    @media (max-width: 820px) {
-      header,
+    .xai-body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .colorbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .color-gradient {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #000080, #0000ff, #00ffff, #ffff00, #ff0000, #800000);
+    }
+
+    .error-box {
+      color: var(--danger);
+      background: var(--danger-bg);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-top: 14px;
+      display: none;
+    }
+
+    @media (max-width: 880px) {
       main {
-        display: block;
-      }
-
-      .status {
-        margin-top: 12px;
-        display: inline-block;
-      }
-
-      .panel + .panel {
-        margin-top: 16px;
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -246,126 +462,310 @@
 <body>
   <div class="shell">
     <header>
-      <h1>X-ray Pneumonia Detection</h1>
+      <div class="brand">
+        <div class="logo-badge">🩻</div>
+        <div>
+          <h1>Federated X-Ray Diagnostics</h1>
+          <p class="subtitle">Explainable AI (Grad-CAM) + Multi-Center Privacy Preservation</p>
+        </div>
+      </div>
       <div class="header-actions">
-        <a href="/privacy">Privacy & Security</a>
-        <a href="/admin">Admin Dashboard</a>
-        <div class="status" id="status">Checking model...</div>
+        <a href="/privacy" class="nav-btn">🔒 Privacy & Security</a>
+        <a href="/admin" class="nav-btn">📊 Admin Dashboard</a>
+        <a href="/hospital" class="nav-btn">🏥 Hospital Portal</a>
+        <div class="status-badge">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Checking model...</span>
+        </div>
       </div>
     </header>
 
     <main>
+      <!-- Left Column: Image Viewer & XAI Controls -->
       <section class="panel">
-        <div class="dropzone" id="dropzone">
-          <img id="preview" alt="Selected X-ray preview">
-          <div class="placeholder">
-            <strong>Select an X-ray image</strong>
-            <p>Upload a chest X-ray to test the trained federated model.</p>
+        <div class="panel-header">
+          <h2 class="panel-title">Chest Radiography Viewer</h2>
+          <span style="font-size: 12px; color: var(--muted);">Supports DICOM / PNG / JPEG</span>
+        </div>
+
+        <div class="viewer-container" id="viewerContainer">
+          <div class="image-stage" id="imageStage">
+            <img id="origImg" alt="Original Chest X-Ray">
+            <img id="heatmapImg" alt="Grad-CAM Saliency Map" style="opacity: 0;">
+            <img id="overlayImg" alt="Blended Grad-CAM Overlay" style="opacity: 0;">
+          </div>
+          <div class="drop-prompt" id="dropPrompt">
+            <div class="drop-icon">📤</div>
+            <strong style="font-size: 16px; color: var(--ink);">Select or Drag & Drop Chest X-Ray</strong>
+            <p style="margin: 6px 0 0; font-size: 13px;">Upload an X-ray to evaluate the federated global model with Grad-CAM region localization.</p>
           </div>
         </div>
-        <div class="controls">
-          <label class="file-button" for="imageInput">Choose Image</label>
-          <input id="imageInput" type="file" accept="image/*">
-          <button id="predictButton" disabled>Predict</button>
+
+        <!-- View mode switcher -->
+        <div class="view-switcher" id="viewSwitcher">
+          <button class="view-btn active" data-mode="overlay">🔥 Grad-CAM Overlay</button>
+          <button class="view-btn" data-mode="original">🩻 Original X-Ray</button>
+          <button class="view-btn" data-mode="heatmap">🗺️ Saliency Heatmap</button>
         </div>
-        <div class="error" id="error"></div>
+
+        <!-- Alpha blend slider -->
+        <div class="slider-row" id="sliderRow">
+          <label for="alphaSlider">Heatmap Opacity:</label>
+          <input type="range" id="alphaSlider" min="0" max="100" value="55">
+          <span id="alphaVal" style="font-size: 12px; color: var(--accent); width: 35px;">55%</span>
+        </div>
+
+        <div class="controls">
+          <label class="btn btn-secondary" for="imageInput">📁 Choose Image</label>
+          <input id="imageInput" type="file" accept="image/*">
+          <button id="predictBtn" class="btn btn-primary" disabled>⚡ Run Diagnostic & XAI</button>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
       </section>
 
+      <!-- Right Column: Diagnostic & Saliency Results -->
       <aside class="panel">
-        <h2 class="result-title">Result</h2>
-        <p class="prediction" id="prediction">Waiting</p>
-        <div class="confidence" id="confidence">No image submitted yet.</div>
-        <div id="probabilities"></div>
+        <div class="panel-header">
+          <h2 class="panel-title">Clinical Diagnostic Assessment</h2>
+        </div>
+
+        <div class="prediction-card">
+          <div class="prediction-label">Automated AI Assessment</div>
+          <div class="prediction-value" id="predValue">Waiting</div>
+          <div class="confidence-badge" id="confBadge">No image analyzed</div>
+        </div>
+
+        <div class="bar-section" id="barsContainer">
+          <div class="bar-row">
+            <div class="bar-label">
+              <span>NORMAL</span>
+              <span id="probNormal">—</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill normal" id="fillNormal"></div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">
+              <span>PNEUMONIA</span>
+              <span id="probPneumonia">—</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill pneumonia" id="fillPneumonia"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explainable AI Clinical Insights -->
+        <div class="xai-card" id="xaiCard">
+          <div class="xai-header">
+            <span>🔬</span>
+            <span>Grad-CAM Explainability Insights</span>
+          </div>
+          <div class="xai-body" id="xaiExplanation">
+            Upload an X-ray to generate visual feature attribution maps highlighting critical radiographic patterns.
+          </div>
+          <div class="colorbar">
+            <span>Low Importance</span>
+            <div class="color-gradient"></div>
+            <span>High Lesion Focus</span>
+          </div>
+        </div>
       </aside>
     </main>
   </div>
 
   <script>
     const imageInput = document.getElementById("imageInput");
-    const predictButton = document.getElementById("predictButton");
-    const preview = document.getElementById("preview");
-    const dropzone = document.getElementById("dropzone");
-    const prediction = document.getElementById("prediction");
-    const confidence = document.getElementById("confidence");
-    const probabilities = document.getElementById("probabilities");
-    const error = document.getElementById("error");
-    const status = document.getElementById("status");
-    let selectedFile = null;
+    const predictBtn = document.getElementById("predictBtn");
+    const viewerContainer = document.getElementById("viewerContainer");
+    const dropPrompt = document.getElementById("dropPrompt");
+    const origImg = document.getElementById("origImg");
+    const heatmapImg = document.getElementById("heatmapImg");
+    const overlayImg = document.getElementById("overlayImg");
+    const viewSwitcher = document.getElementById("viewSwitcher");
+    const sliderRow = document.getElementById("sliderRow");
+    const alphaSlider = document.getElementById("alphaSlider");
+    const alphaVal = document.getElementById("alphaVal");
 
-    async function loadHealth() {
+    const predValue = document.getElementById("predValue");
+    const confBadge = document.getElementById("confBadge");
+    const probNormal = document.getElementById("probNormal");
+    const probPneumonia = document.getElementById("probPneumonia");
+    const fillNormal = document.getElementById("fillNormal");
+    const fillPneumonia = document.getElementById("fillPneumonia");
+    const xaiExplanation = document.getElementById("xaiExplanation");
+    const errorBox = document.getElementById("errorBox");
+
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+
+    let selectedFile = null;
+    let currentMode = "overlay";
+
+    // ── Check Server & Model Health ───────────────────────────
+    async function checkHealth() {
       try {
-        const response = await fetch("/health");
-        const data = await response.json();
-        status.textContent = data.model_loaded ? "Model ready" : "Model missing";
+        const res = await fetch("/health");
+        const data = await res.json();
+        if (data.model_loaded) {
+          statusDot.className = "status-dot online";
+          statusText.textContent = "Global Model Ready";
+        } else {
+          statusDot.className = "status-dot";
+          statusText.textContent = "Model Checkpoint Missing";
+        }
       } catch {
-        status.textContent = "Server unavailable";
+        statusDot.className = "status-dot";
+        statusText.textContent = "Server Offline";
       }
     }
 
+    // ── Image Upload Handling ─────────────────────────────────
+    dropPrompt.addEventListener("click", () => imageInput.click());
+    
     imageInput.addEventListener("change", () => {
       selectedFile = imageInput.files[0] || null;
-      error.textContent = "";
-      predictButton.disabled = !selectedFile;
       if (!selectedFile) return;
 
-      preview.src = URL.createObjectURL(selectedFile);
-      dropzone.classList.add("has-image");
-      prediction.textContent = "Ready";
-      prediction.className = "prediction";
-      confidence.textContent = "Click Predict to analyze this image.";
-      probabilities.innerHTML = "";
+      errorBox.style.display = "none";
+      const objectUrl = URL.createObjectURL(selectedFile);
+      origImg.src = objectUrl;
+      origImg.style.opacity = "1";
+      heatmapImg.style.opacity = "0";
+      overlayImg.style.opacity = "0";
+
+      viewerContainer.classList.add("has-image");
+      viewerContainer.classList.remove("has-result");
+      sliderRow.classList.remove("visible");
+
+      predictBtn.disabled = false;
+      predValue.textContent = "Ready";
+      predValue.className = "prediction-value";
+      confBadge.textContent = "Click 'Run Diagnostic' to analyze";
+      
+      probNormal.textContent = "—";
+      probPneumonia.textContent = "—";
+      fillNormal.style.width = "0%";
+      fillPneumonia.style.width = "0%";
+      xaiExplanation.textContent = "Image loaded. Ready for Grad-CAM feature analysis.";
     });
 
-    predictButton.addEventListener("click", async () => {
+    // ── View Mode Switching ───────────────────────────────────
+    document.querySelectorAll(".view-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentMode = btn.dataset.mode;
+        applyViewMode();
+      });
+    });
+
+    function applyViewMode() {
+      if (currentMode === "original") {
+        origImg.style.opacity = "1";
+        heatmapImg.style.opacity = "0";
+        overlayImg.style.opacity = "0";
+        sliderRow.classList.remove("visible");
+      } else if (currentMode === "heatmap") {
+        origImg.style.opacity = "0";
+        heatmapImg.style.opacity = "1";
+        overlayImg.style.opacity = "0";
+        sliderRow.classList.remove("visible");
+      } else if (currentMode === "overlay") {
+        const alpha = alphaSlider.value / 100;
+        origImg.style.opacity = "1";
+        heatmapImg.style.opacity = alpha;
+        overlayImg.style.opacity = "0";
+        sliderRow.classList.add("visible");
+      }
+    }
+
+    alphaSlider.addEventListener("input", () => {
+      alphaVal.textContent = alphaSlider.value + "%";
+      if (currentMode === "overlay") {
+        heatmapImg.style.opacity = alphaSlider.value / 100;
+      }
+    });
+
+    // ── Inference Execution ───────────────────────────────────
+    predictBtn.addEventListener("click", async () => {
       if (!selectedFile) return;
 
-      predictButton.disabled = true;
-      error.textContent = "";
-      prediction.textContent = "Analyzing";
-      prediction.className = "prediction";
-      confidence.textContent = "Running model inference...";
-      probabilities.innerHTML = "";
+      predictBtn.disabled = true;
+      errorBox.style.display = "none";
+      predValue.textContent = "Analyzing…";
+      predValue.className = "prediction-value";
+      confBadge.textContent = "Computing Grad-CAM Saliency Gradients…";
 
       const formData = new FormData();
       formData.append("file", selectedFile);
 
       try {
-        const response = await fetch("/predict", {
+        const response = await fetch("/predict?include_xai=true&alpha=0.55", {
           method: "POST",
-          body: formData
+          body: formData,
         });
 
         if (!response.ok) {
           const detail = await response.json().catch(() => ({}));
-          throw new Error(detail.detail || "Prediction failed.");
+          throw new Error(detail.detail || "Inference failed.");
         }
 
         const data = await response.json();
-        const predicted = data.prediction;
-        prediction.textContent = predicted;
-        prediction.className = "prediction " + predicted.toLowerCase();
-        confidence.textContent = `Confidence: ${(data.confidence * 100).toFixed(2)}%`;
+        const pred = data.prediction;
+        predValue.textContent = pred;
+        predValue.className = "prediction-value " + pred.toLowerCase();
+        confBadge.textContent = `Confidence: ${(data.confidence * 100).toFixed(2)}%`;
 
-        probabilities.innerHTML = data.probabilities.map(item => `
-          <div class="bar-row">
-            <div class="bar-label">
-              <span>${item.class_name}</span>
-              <span>${(item.probability * 100).toFixed(2)}%</span>
-            </div>
-            <div class="bar"><span style="width: ${item.probability * 100}%"></span></div>
-          </div>
-        `).join("");
+        // Update probability bars
+        data.probabilities.forEach(item => {
+          const pct = (item.probability * 100).toFixed(1) + "%";
+          if (item.class_name.toUpperCase() === "NORMAL") {
+            probNormal.textContent = pct;
+            fillNormal.style.width = pct;
+          } else {
+            probPneumonia.textContent = pct;
+            fillPneumonia.style.width = pct;
+          }
+        });
+
+        // Load XAI Heatmap & Overlay
+        if (data.gradcam_heatmap) {
+          heatmapImg.src = data.gradcam_heatmap;
+          overlayImg.src = data.gradcam_overlay;
+          viewerContainer.classList.add("has-result");
+          currentMode = "overlay";
+          document.querySelectorAll(".view-btn").forEach(b => {
+            b.classList.toggle("active", b.dataset.mode === "overlay");
+          });
+          applyViewMode();
+        }
+
+        // Contextual clinical explanation
+        if (pred === "PNEUMONIA") {
+          xaiExplanation.innerHTML = `
+            <strong>Pneumonic Consolidation Detected:</strong> The model identified high-activation regions (warm red/orange foci) in the pulmonary fields corresponding to increased opacity, consolidations, or interstitial infiltrates characteristic of pneumonia.
+          `;
+        } else {
+          xaiExplanation.innerHTML = `
+            <strong>Clear Lung Fields:</strong> The model identified uniform low-gradient activation across the pulmonary parenchyma without focal consolidation patterns, consistent with a clear normal radiograph.
+          `;
+        }
+
       } catch (err) {
-        prediction.textContent = "Error";
-        prediction.className = "prediction";
-        confidence.textContent = "Could not complete prediction.";
-        error.textContent = err.message;
+        predValue.textContent = "Error";
+        predValue.className = "prediction-value";
+        confBadge.textContent = "Diagnostic failed";
+        errorBox.textContent = err.message;
+        errorBox.style.display = "block";
       } finally {
-        predictButton.disabled = !selectedFile;
+        predictBtn.disabled = !selectedFile;
       }
     });
 
-    loadHealth();
+    checkHealth();
   </script>
 </body>
 </html>

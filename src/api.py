@@ -22,6 +22,7 @@ from model import build_model, load_checkpoint, save_checkpoint
 from train_utils import evaluate, fedavg
 
 from evaluate import run_evaluation, load_report
+from xai import explain_image
 
 from pydantic import BaseModel
 
@@ -393,7 +394,11 @@ def get_evaluation_report():
 
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+async def predict(
+    file: UploadFile = File(...),
+    include_xai: bool = Query(True, description="Whether to compute Grad-CAM heatmaps"),
+    alpha: float = Query(0.5, description="Heatmap blend transparency (0.0 - 1.0)"),
+):
     try:
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -404,6 +409,21 @@ async def predict(file: UploadFile = File(...)):
         active_model = get_model()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if include_xai:
+        result = explain_image(
+            model=active_model,
+            image_input=image,
+            device=device,
+            alpha=alpha,
+        )
+        return {
+            "prediction": result["prediction"],
+            "confidence": result["confidence"],
+            "probabilities": result["probabilities"],
+            "gradcam_overlay": result["overlay_base64"],
+            "gradcam_heatmap": result["heatmap_base64"],
+        }
 
     tensor = eval_transforms()(image).unsqueeze(0).to(device)
     with torch.no_grad():
@@ -421,6 +441,8 @@ async def predict(file: UploadFile = File(...)):
             }
             for class_name, probability in zip(CLASS_NAMES, probabilities.tolist())
         ],
+        "gradcam_overlay": None,
+        "gradcam_heatmap": None,
     }
 
 
