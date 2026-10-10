@@ -13,8 +13,8 @@ $VenvUvicorn = Join-Path $ScriptDir ".venv\Scripts\uvicorn.exe"
 $PythonCmd = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
 $UvicornCmd = if (Test-Path $VenvUvicorn) { $VenvUvicorn } else { "uvicorn" }
 
-Write-Host "[1/3] Launching FastAPI Backend Server on port 8000..." -ForegroundColor Yellow
-Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "title FL Server && `"$UvicornCmd`" src.api:app --host 127.0.0.1 --port 8000 --reload"
+Write-Host "[1/3] Launching FastAPI Backend Server on 0.0.0.0:8000 (LAN enabled)..." -ForegroundColor Yellow
+Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "title FL Server && `"$UvicornCmd`" src.api:app --host 0.0.0.0 --port 8000 --reload"
 
 Write-Host "[2/3] Waiting for server to initialize..." -ForegroundColor Yellow
 Start-Sleep -Seconds 3
@@ -24,7 +24,8 @@ Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "title FL Hospital Client 
 
 Write-Host "========================================================" -ForegroundColor Green
 Write-Host "  Federated Learning System Started Successfully!" -ForegroundColor Green
-Write-Host "  - Backend Server:   http://127.0.0.1:8000" -ForegroundColor Green
+Write-Host "  - Local Server:     http://127.0.0.1:8000" -ForegroundColor Green
+Write-Host "  - LAN Access:       http://0.0.0.0:8000 (or your Wi-Fi IP:8000)" -ForegroundColor Green
 Write-Host "  - Swagger API Docs: http://127.0.0.1:8000/docs" -ForegroundColor Green
 Write-Host "  - Run '.\stop.ps1' or 'stop.bat' to terminate." -ForegroundColor Green
 Write-Host "========================================================" -ForegroundColor Green
