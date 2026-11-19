@@ -15,6 +15,18 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+# Fix for PyInstaller / GUI mode: ensure sys.stdout and sys.stderr have write methods
+class SafeNullWriter:
+    def write(self, s):
+        pass
+    def flush(self):
+        pass
+
+if sys.stdout is None:
+    sys.stdout = SafeNullWriter()
+if sys.stderr is None:
+    sys.stderr = SafeNullWriter()
+
 import torch
 from PIL import Image, ImageTk
 
@@ -22,6 +34,7 @@ from PIL import Image, ImageTk
 SRC_DIR = Path(__file__).resolve().parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
 
 from config import CLASS_NAMES, MODELS_DIR
 from hospital_client import login_hospital, register_hospital, train_and_submit

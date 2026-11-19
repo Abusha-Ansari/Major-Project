@@ -115,12 +115,12 @@ Step 3: In the GUI:
 Step 4: Under 'Local Dataset & Training Setup':
   - Click 'Browse' on Dataset Folder.
   - Select the 'hospital_1' (or 'hospital_2') folder on this USB drive.
-  - Click '⚡ Train Locally and Submit Weights'.
+  - Click 'Train Locally and Submit Weights'.
 
 Step 5: Clinical Diagnostics & Grad-CAM XAI:
   - Click on the 'Clinical Diagnostics & Grad-CAM XAI' tab.
   - Browse for any sample X-ray in 'HospitalClient/sample_xrays/'.
-  - Click '⚡ Run Diagnostic & Grad-CAM Analysis' to view the heatmap overlay!
+  - Click 'Run Diagnostic & Grad-CAM Analysis' to view the heatmap overlay!
 ================================================================================
 """,
         encoding="utf-8",
