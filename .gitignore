@@ -6,3 +6,6 @@ __pycache__/
 *.log
 client_work/
 server_storage/
+build/
+dist/
+USB_DEMO_PACKAGE/

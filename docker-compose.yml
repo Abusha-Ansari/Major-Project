@@ -1,0 +1,22 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fl-pneumonia-server
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist the trained model across container restarts
+      - ./models:/app/models
+      # Persist FL update uploads and aggregation archives
+      - ./server_storage:/app/server_storage
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

@@ -1,9 +1,28 @@
 import copy
+import sys
 from collections import OrderedDict
 
 import torch
 from torch import nn
-from tqdm import tqdm
+
+
+def get_progress_bar(loader, desc=""):
+    """Returns tqdm progress bar if a valid stderr stream is available, otherwise raw loader."""
+    if sys.stderr is None or getattr(sys, "frozen", False):
+        return loader
+    try:
+        from tqdm import tqdm
+        return tqdm(loader, desc=desc, leave=False)
+    except Exception:
+        return loader
+
+
+def safe_print(msg):
+    if sys.stdout is not None:
+        try:
+            print(msg)
+        except Exception:
+            pass
 
 
 def train_one_epoch(model, loader, optimizer, criterion, device, on_batch=None):
@@ -13,7 +32,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, on_batch=None):
     total = 0
     total_batches = len(loader)
 
-    for batch_idx, (images, labels) in enumerate(tqdm(loader, desc="train", leave=False)):
+    for batch_idx, (images, labels) in enumerate(get_progress_bar(loader, desc="train")):
         images = images.to(device)
         labels = labels.to(device)
 
@@ -49,7 +68,7 @@ def evaluate(model, loader, criterion, device):
     correct = 0
     total = 0
 
-    for images, labels in tqdm(loader, desc="eval", leave=False):
+    for images, labels in get_progress_bar(loader, desc="eval"):
         images = images.to(device)
         labels = labels.to(device)
         outputs = model(images)
@@ -66,6 +85,7 @@ def evaluate(model, loader, criterion, device):
     }
 
 
+
 def train_model(model, train_loader, device, epochs, lr, on_epoch=None, on_batch=None):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -76,7 +96,7 @@ def train_model(model, train_loader, device, epochs, lr, on_epoch=None, on_batch
             model, train_loader, optimizer, criterion, device, on_batch=on_batch
         )
         history.append(metrics)
-        print(
+        safe_print(
             f"epoch={epoch} loss={metrics['loss']:.4f} "
             f"accuracy={metrics['accuracy']:.4f} samples={metrics['samples']}"
         )

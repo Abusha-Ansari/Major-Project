@@ -15,23 +15,39 @@ from model import build_model, load_checkpoint
 from train_utils import train_model
 
 
+def normalize_server_url(url: str) -> str:
+    """Ensures server URL has http:// scheme and no trailing slash."""
+    url = str(url).strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = f"http://{url}"
+    return url.rstrip("/")
+
+
 def log_message(message, logger=None):
     if logger:
-        logger(message)
-    else:
-        print(message)
+        try:
+            logger(message)
+        except Exception:
+            pass
+    elif sys.stdout is not None:
+        try:
+            print(message)
+        except Exception:
+            pass
 
 
 def download_global_model(server_url, output_path, logger=None):
+    server_url = normalize_server_url(server_url)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    url = f"{server_url.rstrip('/')}/fl/model"
+    url = f"{server_url}/fl/model"
     log_message(f"Downloading global model from {url}", logger)
 
     response = requests.get(url, timeout=120)
     response.raise_for_status()
     output_path.write_bytes(response.content)
     return output_path
+
 
 
 def train_local_update(
@@ -79,7 +95,8 @@ def submit_update(
     server_url, update_path, hospital_name, sample_count,
     round_id="current", token=None, logger=None,
 ):
-    url = f"{server_url.rstrip('/')}/fl/submit-update"
+    server_url = normalize_server_url(server_url)
+    url = f"{server_url}/fl/submit-update"
     log_message(f"Submitting weights to {url}", logger)
 
     headers = {}
@@ -111,7 +128,8 @@ def submit_update(
 
 def register_hospital(server_url, hospital_name, password, logger=None):
     """Register a new hospital with the central server. Returns {name, token}."""
-    url = f"{server_url.rstrip('/')}/hospital/register"
+    server_url = normalize_server_url(server_url)
+    url = f"{server_url}/hospital/register"
     log_message(f"Registering '{hospital_name}' at {url}", logger)
     response = requests.post(url, json={"name": hospital_name, "password": password}, timeout=30)
     try:
@@ -127,7 +145,8 @@ def register_hospital(server_url, hospital_name, password, logger=None):
 
 def login_hospital(server_url, hospital_name, password, logger=None):
     """Login with name + password. Returns {name, token} on success."""
-    url = f"{server_url.rstrip('/')}/hospital/login"
+    server_url = normalize_server_url(server_url)
+    url = f"{server_url}/hospital/login"
     log_message(f"Logging in as '{hospital_name}' at {url}", logger)
     response = requests.post(url, json={"name": hospital_name, "password": password}, timeout=30)
     try:
@@ -156,6 +175,8 @@ def train_and_submit(
     on_epoch=None,
     on_batch=None,
 ):
+    server_url = normalize_server_url(server_url)
+
     hospital_key = "".join(char if char.isalnum() or char in ("-", "_") else "_" for char in hospital_name)
     client_dir = Path(work_dir) / (hospital_key or "hospital")
     global_model_path = client_dir / "global_model.pt"
